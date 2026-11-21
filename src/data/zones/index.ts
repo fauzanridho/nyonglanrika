@@ -1,168 +1,227 @@
 // ============================================================
-// Data: Zones
+// Data: Zones & Portals (Konsisten Koordinat Grid 30x16 Tile 16x16)
 // ============================================================
 
 export interface Portal {
-  /** Target zone ID */
   to: string;
-  /** Spawn position in target zone */
   spawnX: number;
   spawnY: number;
-  /** Portal position in this zone (tile coords) */
   x: number;
   y: number;
+  label: string;
+}
+
+export interface MemoryObjectDef {
+  hint_id: string;
+  x: number;
+  y: number;
+  sprite: string;
 }
 
 export interface ZoneDef {
   id: string;
   name: string;
-  /** Grid teks untuk addLevel. T=tree, W=water, b=bench, dll */
   grid: string[];
   spawnX: number;
   spawnY: number;
   portals: Portal[];
   fishSpots?: { id: string; x: number; y: number }[];
-  npcs?: string[]; // NPC IDs dari npcs.ts
+  npcs?: string[];
+  memoryObjects?: MemoryObjectDef[];
 }
 
 export const ZONES: Record<string, ZoneDef> = {
+  // ============================================================
+  // 1. ALUN-ALUN PURWOKERTO (Pusat Kota)
+  // Portal Bawah-Kiri (x:4, y:15)  -> Pasar Wage (x:4, y:2)
+  // Portal Bawah-Kanan (x:25, y:15) -> Sungai Serayu (x:15, y:2)
+  // Portal Atas-Tengah (x:15, y:0) -> Stasiun (x:15, y:13)
+  // ============================================================
   alun_alun: {
     id: 'alun_alun',
     name: 'Alun-alun Purwokerto',
     grid: [
-      'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
-      'T............................T',
-      'T............................T',
-      'T..bb..........bb............T',
-      'T............................T',
-      'T............L...............T',
-      'T............................T',
-      'T............................T',
-      'T..bb..........bb............T',
-      'T............................T',
-      'T............................T',
-      'T............................T',
-      'T............................T',
-      'T............L...............T',
-      'T............................T',
-      'TTTT..TTTTTTTTTTTTTTTTTT..TTTT',
+      'TTTTTTTTTTTTTT..TTTTTTTTTTTTTT', // y:0 (Portal ke Stasiun di x:14-15)
+      'T............................T', // y:1
+      'T............................T', // y:2
+      'T..bb..........bb............T', // y:3
+      'T............................T', // y:4
+      'T............L...............T', // y:5
+      'T............................T', // y:6
+      'T............................T', // y:7
+      'T..bb..........bb............T', // y:8
+      'T............................T', // y:9
+      'T............................T', // y:10
+      'T............................T', // y:11
+      'T............L...............T', // y:12
+      'T............................T', // y:13
+      'T............................T', // y:14
+      'TTTT..TTTTTTTTTTTTTTTTTT..TTTT', // y:15 (Portal Pasar Wage x:4-5, Serayu x:24-25)
     ],
     spawnX: 15 * 16,
-    spawnY: 8 * 16,
+    spawnY: 7 * 16,
     portals: [
-      { to: 'pasar_wage', x: 4, y: 15, spawnX: 15 * 16, spawnY: 1 * 16 },
-      { to: 'sungai_serayu', x: 25, y: 15, spawnX: 2 * 16, spawnY: 1 * 16 },
+      // Ke Stasiun (Utara)
+      { to: 'stasiun', x: 15, y: 0, spawnX: 15 * 16, spawnY: 13 * 16, label: 'Ke Stasiun Purwokerto' },
+      // Ke Pasar Wage (Barat Daya)
+      { to: 'pasar_wage', x: 5, y: 15, spawnX: 15 * 16, spawnY: 2 * 16, label: 'Ke Pasar Wage' },
+      // Ke Sungai Serayu (Tenggara)
+      { to: 'sungai_serayu', x: 25, y: 15, spawnX: 15 * 16, spawnY: 2 * 16, label: 'Ke Tepi Sungai Serayu' },
     ],
     npcs: ['npc_pak_camat'],
+    memoryObjects: [
+      { hint_id: 'hint_bench_01', x: 5, y: 3, sprite: 'bench' },
+      { hint_id: 'hint_lantern_01', x: 13, y: 5, sprite: 'lamp' },
+    ],
   },
 
+  // ============================================================
+  // 2. PASAR WAGE (Pusat Perbelanjaan & Ekonomi)
+  // Masuk dari Alun-alun di Utara (x:15, y:1)
+  // Portal Keluar kembali ke Alun-alun di Utara (x:15, y:0)
+  // ============================================================
   pasar_wage: {
     id: 'pasar_wage',
     name: 'Pasar Wage',
     grid: [
-      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW',
-      'W............................W',
-      'W....S.....S.....S..........W',
-      'W............................W',
-      'W............................W',
-      'W....S.....S.....S..........W',
-      'W............................W',
-      'W............................W',
-      'W....S.....S.....S..........W',
-      'W............................W',
-      'W............................W',
-      'WWWW..WWWWWWWWWWWWWWWWWW..WWWW',
+      'BBBBBBBBBBBBTT..TTBBBBBBBBBBBB', // y:0 (Pintu kembali ke Alun-alun di x:14-15)
+      'B............................B', // y:1
+      'B............................B', // y:2 (Spawn dari Alun-alun)
+      'B....S.....S.....S.....S.....B', // y:3 Kios Bu Warni & pedagang
+      'B............................B', // y:4
+      'B............................B', // y:5
+      'B....S.....S.....S.....S.....B', // y:6 Kios
+      'B............................B', // y:7
+      'B............................B', // y:8
+      'B....S.....S.....S.....S.....B', // y:9 Kios
+      'B............................B', // y:10
+      'B............................B', // y:11
+      'B............................B', // y:12
+      'B............................B', // y:13
+      'B............................B', // y:14
+      'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB', // y:15
     ],
     spawnX: 15 * 16,
-    spawnY: 1 * 16,
+    spawnY: 2 * 16,
     portals: [
-      { to: 'alun_alun', x: 4, y: 0, spawnX: 4 * 16, spawnY: 14 * 16 },
-      { to: 'stasiun', x: 25, y: 0, spawnX: 2 * 16, spawnY: 8 * 16 },
+      { to: 'alun_alun', x: 15, y: 0, spawnX: 5 * 16, spawnY: 13 * 16, label: 'Kembali ke Alun-alun' },
     ],
     npcs: ['npc_pedagang'],
   },
 
+  // ============================================================
+  // 3. TEPI SUNGAI SERAYU (Spot Mancing & Suasana Alam)
+  // Masuk dari Alun-alun di Utara (x:15, y:1)
+  // Portal Kembali ke Alun-alun di Utara (x:15, y:0)
+  // Portal ke Baturraden di Timur (x:29, y:3)
+  // Air mengalir di selatan (y:7 s/d y:12)
+  // Spot pancing di bibir air y:7
+  // ============================================================
   sungai_serayu: {
     id: 'sungai_serayu',
     name: 'Tepi Sungai Serayu',
     grid: [
-      'TTTT..TTTTTTTTTTTTTTTTTTTTTTTT',
-      'T............................T',
-      'T............................T',
-      'T............................T',
-      'T............................T',
-      'T............................T',
-      'RRRRRRRRRRRRRRRRRRRRRRRRRRRRRR',
-      'RRRRRRRRRRRRRRRRRRRRRRRRRRRRRR',
-      'RRRRRRRRRRRRRRRRRRRRRRRRRRRRRR',
-      'T............................T',
-      'T............................T',
-      'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
+      'TTTTTTTTTTTTTT..TTTTTTTTTTTTTT', // y:0 (Pintu kembali ke Alun-alun di x:14-15)
+      'T............................T', // y:1
+      'T............................T', // y:2 (Spawn dari Alun-alun)
+      'T.............................', // y:3 (Jalan ke Baturraden di x:29)
+      'T.............................', // y:4
+      'T............................T', // y:5 Tepian rumput
+      'T..b.......b.......b.......b.T', // y:6 Bangku istirahat memancing
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', // y:7 Permukaan air sungai (spot mancing)
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', // y:8
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', // y:9
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', // y:10
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', // y:11
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', // y:12
+      'T............................T', // y:13 Seberang sungai
+      'T............................T', // y:14
+      'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT', // y:15
     ],
-    spawnX: 2 * 16,
-    spawnY: 1 * 16,
+    spawnX: 15 * 16,
+    spawnY: 2 * 16,
     portals: [
-      { to: 'alun_alun', x: 4, y: 0, spawnX: 25 * 16, spawnY: 14 * 16 },
-      { to: 'baturraden', x: 28, y: 5, spawnX: 1 * 16, spawnY: 8 * 16 },
+      { to: 'alun_alun', x: 15, y: 0, spawnX: 25 * 16, spawnY: 13 * 16, label: 'Kembali ke Alun-alun' },
+      { to: 'baturraden', x: 29, y: 3, spawnX: 2 * 16, spawnY: 5 * 16, label: 'Menuju Baturraden' },
     ],
     fishSpots: [
-      { id: 'serayu_1', x: 8, y: 5 },
-      { id: 'serayu_2', x: 20, y: 5 },
+      { id: 'serayu_1', x: 8, y: 7 },
+      { id: 'serayu_2', x: 20, y: 7 },
+    ],
+    memoryObjects: [
+      { hint_id: 'hint_bottle_01', x: 10, y: 6, sprite: 'memory_bottle' },
     ],
   },
 
+  // ============================================================
+  // 4. STASIUN PURWOKERTO
+  // Masuk dari Alun-alun di Selatan (x:15, y:14)
+  // ============================================================
   stasiun: {
     id: 'stasiun',
     name: 'Stasiun Purwokerto',
     grid: [
-      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW',
-      'W............................W',
-      'W..BBBBBBBBBBBBBBBBBBBB......W',
-      'W............................W',
-      'W............................W',
-      'W..rrrrrrrrrrrrrrrrrrrr......W',
-      'W..rrrrrrrrrrrrrrrrrrrr......W',
-      'W............................W',
-      'W............................W',
-      'WW..WWWWWWWWWWWWWWWWWWWWWWWWWW',
+      'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB', // y:0
+      'B............................B', // y:1
+      'B..BBBBBBBBBBBBBBBBBBBBBBBB..B', // y:2 Peron
+      'B............................B', // y:3
+      'B..rrrrrrrrrrrrrrrrrrrrrrrr..B', // y:4 Rel kereta 1
+      'B..rrrrrrrrrrrrrrrrrrrrrrrr..B', // y:5 Rel kereta 2
+      'B............................B', // y:6
+      'B............................B', // y:7
+      'B............................B', // y:8
+      'B............................B', // y:9
+      'B............................B', // y:10
+      'B............................B', // y:11
+      'B............................B', // y:12
+      'B............................B', // y:13
+      'B.............BB.............B', // y:14
+      'BBBBBBBBBBBBTT..TTBBBBBBBBBBBB', // y:15 (Kembali ke Alun-alun x:14-15)
     ],
-    spawnX: 2 * 16,
-    spawnY: 8 * 16,
+    spawnX: 15 * 16,
+    spawnY: 13 * 16,
     portals: [
-      { to: 'pasar_wage', x: 2, y: 9, spawnX: 25 * 16, spawnY: 1 * 16 },
-      { to: 'baturraden', x: 28, y: 4, spawnX: 1 * 16, spawnY: 5 * 16 },
+      { to: 'alun_alun', x: 15, y: 15, spawnX: 15 * 16, spawnY: 2 * 16, label: 'Kembali ke Alun-alun' },
     ],
     npcs: ['npc_masinis'],
   },
 
+  // ============================================================
+  // 5. BATURRADEN (Dataran Tinggi & Telaga Sunyi)
+  // Masuk dari Sungai Serayu di Barat (x:1, y:5)
+  // ============================================================
   baturraden: {
     id: 'baturraden',
     name: 'Baturraden',
     grid: [
-      'PPPPPPPPPPPPPPPPPPPPPPPPPPPPPP',
-      'P............................P',
-      'P....P....P....P....P........P',
-      'P............................P',
-      'P............................P',
-      'P....P....P....P....P........P',
-      'P............................P',
-      'P............................P',
-      'P..RRRRRRRRRR................P',
-      'P..RRRRRRRRRR................P',
-      'P............................P',
-      'P............................P',
-      'P............................P',
-      'P............RRRRRR..........P',
-      'P............RRRRRR..........P',
-      'PPPP..PPPPPPPPPPPPPPPPPPPPPPP',
+      'PPPPPPPPPPPPPPPPPPPPPPPPPPPPPP', // y:0
+      'P............................P', // y:1
+      'P....P....P....P....P........P', // y:2
+      'P............................P', // y:3
+      'P............................P', // y:4
+      '.....P....P....P....P........P', // y:5 (Jalan masuk dari Serayu di x:0)
+      'P............................P', // y:6
+      'P............................P', // y:7
+      'P..WWWWWWWWWW................P', // y:8 Curug Cipendok
+      'P..WWWWWWWWWW................P', // y:9
+      'P............................P', // y:10
+      'P............................P', // y:11
+      'P............WWWWWW..........P', // y:12 Telaga Sunyi
+      'P............WWWWWW..........P', // y:13 (Spot mancing telaga_sunyi)
+      'P............WWWWWW..........P', // y:14
+      'PPPPPPPPPPPPPPPPPPPPPPPPPPPPPP', // y:15
     ],
-    spawnX: 1 * 16,
+    spawnX: 2 * 16,
     spawnY: 5 * 16,
     portals: [
-      { to: 'sungai_serayu', x: 0, y: 8, spawnX: 28 * 16, spawnY: 5 * 16 },
+      { to: 'sungai_serayu', x: 0, y: 5, spawnX: 28 * 16, spawnY: 3 * 16, label: 'Kembali ke Sungai Serayu' },
     ],
     fishSpots: [
-      { id: 'telaga_sunyi', x: 14, y: 13 },
+      { id: 'telaga_sunyi', x: 15, y: 13 },
+    ],
+    memoryObjects: [
+      { hint_id: 'hint_pine_01', x: 6, y: 2, sprite: 'pine' },
+      { hint_id: 'hint_telaga_01', x: 13, y: 12, sprite: 'memory_stone' },
     ],
     npcs: ['npc_kakek_hutan'],
   },

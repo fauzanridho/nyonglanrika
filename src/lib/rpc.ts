@@ -70,7 +70,21 @@ export function catchFish(spot: string) {
   );
 }
 
-// ---- Farming ----
+// ---- House & Plots ----
+export function getMyHouse() {
+  return callRpc<{
+    id: string;
+    kind: string;
+    tier: number;
+    plots: Array<{
+      slot: number;
+      crop_id: string | null;
+      planted_at: string | null;
+      last_watered: string | null;
+    }>;
+  }>('get_my_house');
+}
+
 export function plantCrop(houseId: string, slot: number, cropId: string) {
   return callRpc('plant_crop', { p_house_id: houseId, p_slot: slot, p_crop_id: cropId });
 }
@@ -100,6 +114,25 @@ export function removeFurniture(itemUuid: string) {
 }
 
 // ---- Party ----
+export function getMyParty() {
+  return callRpc<{
+    party_id: string;
+    party_name: string;
+    owner_id: string;
+    is_owner: boolean;
+    members: Array<{ player_id: string; name: string; is_owner: boolean }>;
+    shared_house_id: string | null;
+    house_items: Array<{
+      id: string;
+      item_id: string;
+      x: number;
+      y: number;
+      rot: number;
+      placed_by: string;
+    }>;
+  } | null>('get_my_party');
+}
+
 export function createParty(name: string) {
   return callRpc<string>('create_party', { p_name: name });
 }
@@ -120,7 +153,18 @@ export function dissolveParty() {
   return callRpc('dissolve_party');
 }
 
-// ---- Hints ----
+// ---- Quests & Discoveries ----
+export function getQuestsAndDiscoveries() {
+  return callRpc<{
+    quests: Array<{ quest_id: string; state: Record<string, unknown>; done: boolean }>;
+    discoveries: Array<{ hint_id: string; found_at: string }>;
+  }>('get_quests_and_discoveries');
+}
+
+export function completeQuest(questId: string) {
+  return callRpc<{ success: boolean; reward_coins: number }>('complete_quest', { p_quest_id: questId });
+}
+
 export function discoverHint(hintId: string, zone: string, x: number, y: number) {
   return callRpc<string>('discover_hint', { p_hint_id: hintId, p_zone: zone, p_x: x, p_y: y });
 }
