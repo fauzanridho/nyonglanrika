@@ -149,6 +149,7 @@ export default function GameCanvas() {
         spawnY: currentPlayer?.posY || undefined,
         look: currentPlayer?.look || {},
         playerName: currentPlayer?.name || 'Player',
+        myPlayerId: currentPlayer?.id,
         onOpenDialog: (npcName: string, lines: string[], isShop?: boolean) => {
           setIsShopNpc(!!isShop);
           useGameStore.getState().openDialog(npcName, lines);

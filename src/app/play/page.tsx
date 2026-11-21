@@ -21,7 +21,6 @@ export default function PlayPage() {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         setSession(currentSession);
-        setAuthReady(true);
 
         if (currentSession) {
           const player = await getPlayer();
@@ -44,7 +43,9 @@ export default function PlayPage() {
         }
       } catch (err) {
         console.error('Init error:', err);
+        setHasCharacter(false);
       } finally {
+        setAuthReady(true);
         setIsLoading(false);
       }
     }
@@ -70,6 +71,8 @@ export default function PlayPage() {
         } else {
           setHasCharacter(false);
         }
+      } else {
+        setHasCharacter(false);
       }
     });
 
@@ -78,7 +81,7 @@ export default function PlayPage() {
     };
   }, [setPlayer, setIsLoading]);
 
-  if (!authReady) {
+  if (!authReady || hasCharacter === null) {
     return (
       <div className="min-h-screen bg-[#141828] flex items-center justify-center text-white font-mono">
         <p className="animate-pulse">Menghubungkan ke Purwokerto...</p>
@@ -92,7 +95,7 @@ export default function PlayPage() {
   }
 
   // 2. Jika sudah login Google tapi belum buat karakter: Tampilkan Form Buat Karakter dengan Live Pixel Preview
-  if (hasCharacter === false) {
+  if (!hasCharacter) {
     return <CreateCharacterScreen userEmail={session.user?.email} />;
   }
 
