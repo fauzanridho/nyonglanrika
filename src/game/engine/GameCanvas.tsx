@@ -14,6 +14,7 @@ import HouseEditorModal from '../ui/HouseEditorModal';
 import QuestModal, { QuestProgressItem } from '../ui/QuestModal';
 import MemoryPopup from '../ui/MemoryPopup';
 import MobileControls from '../ui/MobileControls';
+import WardrobeModal from '../ui/WardrobeModal';
 import { sfx } from '../audio/sfx';
 import { getInventory, getMyHouse, getMyParty, getQuestsAndDiscoveries } from '@/lib/rpc';
 
@@ -40,6 +41,7 @@ export default function GameCanvas() {
   const [showCooking, setShowCooking] = useState(false);
   const [showParty, setShowParty] = useState(false);
   const [showQuests, setShowQuests] = useState(false);
+  const [showWardrobe, setShowWardrobe] = useState(false);
   const [showHouseEditor, setShowHouseEditor] = useState<string | null>(null);
 
   const [houseData, setHouseData] = useState<{ id: string; plots: PlotData[] } | null>(null);
@@ -133,7 +135,8 @@ export default function GameCanvas() {
       kRef.current = k;
       registerWorldScene(k);
 
-      const currentPlayer = useGameStore.getState().player;
+      // Gunakan data player aktif saat ini
+      const currentPlayer = player || useGameStore.getState().player;
       k.go('world', {
         zoneId: currentPlayer?.zone || 'alun_alun',
         spawnX: currentPlayer?.posX || undefined,
@@ -170,7 +173,7 @@ export default function GameCanvas() {
         kRef.current = null;
       }
     };
-  }, [toggleInventory]);
+  }, [player, toggleInventory]);
 
   const getWeatherIcon = (wName?: string) => {
     switch (wName) {
@@ -186,7 +189,7 @@ export default function GameCanvas() {
     <div className="relative flex flex-col items-center select-none font-mono">
       {/* Top Bar Info & Status Cuaca/WIB */}
       <div className="absolute top-2 left-2 z-20 flex flex-wrap gap-2 text-xs bg-black/70 px-3 py-1.5 rounded text-white backdrop-blur-sm border border-white/10 shadow-lg">
-        <div>👤 <span className="text-yellow-300 font-bold">{player?.name}</span></div>
+        <div>👤 <span className="text-yellow-300 font-bold">{player?.name || 'Player'}</span></div>
         <div className="border-l border-white/20 pl-2">💰 <span className="text-amber-400 font-bold">{player?.coins ?? 0}</span></div>
         <div className="border-l border-white/20 pl-2">📍 <span className="text-emerald-400 font-bold">{currentZoneTitle}</span></div>
         <div className="border-l border-white/20 pl-2 text-sky-300">{getWeatherIcon(weather?.weather)}</div>
@@ -202,6 +205,17 @@ export default function GameCanvas() {
 
       {/* Top Right Action Buttons */}
       <div className="absolute top-2 right-2 z-20 flex gap-1.5">
+        <button
+          onClick={() => {
+            sfx.playClick();
+            setShowWardrobe(true);
+          }}
+          className="bg-black/70 hover:bg-black/90 text-pink-300 text-xs px-2 py-1.5 rounded border border-white/10 transition-colors shadow-lg"
+          title="Lemari Pakaian & Akun"
+        >
+          👗 Lemari
+        </button>
+
         <button
           onClick={() => {
             sfx.playClick();
@@ -270,7 +284,7 @@ export default function GameCanvas() {
 
         <button
           onClick={toggleSound}
-          className="bg-black/70 hover:bg-black/90 text-white text-xs px-2 py-1.5 rounded border border-white/10 transition-colors shadow-lg"
+          className="bg-black/70 hover:bg-black/90 text-white text-xs px-2.5 py-1.5 rounded border border-white/10 transition-colors shadow-lg"
           title="Bisukan / Nyalakan Suara"
         >
           {isMuted ? '🔇' : '🔊'}
@@ -360,6 +374,24 @@ export default function GameCanvas() {
         />
       )}
 
+      {showWardrobe && (
+        <WardrobeModal
+          onClose={() => setShowWardrobe(false)}
+          onSaved={() => {
+            if (kRef.current) {
+              const p = useGameStore.getState().player;
+              kRef.current.go('world', {
+                zoneId: p?.zone || 'alun_alun',
+                spawnX: p?.posX || undefined,
+                spawnY: p?.posY || undefined,
+                look: p?.look || {},
+                playerName: p?.name || 'Player',
+              });
+            }
+          }}
+        />
+      )}
+
       {discoveredMemoryText && (
         <MemoryPopup
           hintText={discoveredMemoryText}
@@ -382,6 +414,8 @@ export default function GameCanvas() {
         <span>Gerak: <kbd className="px-1.5 py-0.5 bg-gray-800 text-gray-200 rounded border border-gray-600">WASD</kbd></span>
         <span>•</span>
         <span>Aksi: <kbd className="px-1.5 py-0.5 bg-gray-800 text-gray-200 rounded border border-gray-600">E / Spasi</kbd></span>
+        <span>•</span>
+        <span>Lemari: 👗</span>
         <span>•</span>
         <span>Quest: <kbd className="px-1.5 py-0.5 bg-gray-800 text-gray-200 rounded border border-gray-600">Q</kbd></span>
         <span>•</span>

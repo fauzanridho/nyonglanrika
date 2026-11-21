@@ -40,6 +40,10 @@ export function createCharacter(name: string, look: Record<string, string>) {
   return callRpc<string>('create_character', { p_name: name, p_look: look });
 }
 
+export function updateCharacterLook(look: Record<string, string>) {
+  return callRpc('update_character_look', { p_look: look });
+}
+
 // ---- State ----
 export function saveState(zone: string, x: number, y: number) {
   return callRpc('save_state', { p_zone: zone, p_x: x, p_y: y });
