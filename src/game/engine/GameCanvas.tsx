@@ -54,9 +54,13 @@ export default function GameCanvas() {
   const refreshHouse = () => {
     getMyHouse()
       .then((h) => {
-        setHouseData({ id: h.id, plots: h.plots || [] });
+        if (h && h.id) {
+          setHouseData({ id: h.id, plots: h.plots || [] });
+        }
       })
-      .catch(console.error);
+      .catch((e) => {
+        console.warn('House not ready yet:', e?.message);
+      });
   };
 
   const refreshParty = () => {
@@ -135,8 +139,10 @@ export default function GameCanvas() {
       kRef.current = k;
       registerWorldScene(k);
 
-      // Gunakan data player aktif saat ini
-      const currentPlayer = player || useGameStore.getState().player;
+      // Daftarkan scene world jika belum
+      registerWorldScene(k);
+
+      const currentPlayer = useGameStore.getState().player;
       k.go('world', {
         zoneId: currentPlayer?.zone || 'alun_alun',
         spawnX: currentPlayer?.posX || undefined,
@@ -173,7 +179,7 @@ export default function GameCanvas() {
         kRef.current = null;
       }
     };
-  }, [player, toggleInventory]);
+  }, [toggleInventory]);
 
   const getWeatherIcon = (wName?: string) => {
     switch (wName) {
