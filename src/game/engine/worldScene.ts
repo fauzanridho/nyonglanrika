@@ -43,7 +43,8 @@ export function registerWorldScene(k: KAPLAYCtx) {
 
     // Muat semua kumpulan sprites
     loadWorldSprites(k);
-    loadPlayerSprite(k, opts.look);
+    const localSpriteKey = `player_${opts.myPlayerId || 'me'}`;
+    loadPlayerSprite(k, opts.look, localSpriteKey);
     loadNpcSprites(k);
     loadFishingSprites(k);
     loadMemorySprites(k);
@@ -92,7 +93,7 @@ export function registerWorldScene(k: KAPLAYCtx) {
     const startY = opts.spawnY ?? zoneDef.spawnY ?? 7 * 16;
 
     const player = k.add([
-      k.sprite('player', { anim: 'idle-down' }),
+      k.sprite(localSpriteKey, { anim: 'idle-down' }),
       k.pos(startX, startY),
       k.area({ shape: new k.Rect(k.vec2(2, 6), 12, 10) }),
       k.body(),
@@ -121,7 +122,7 @@ export function registerWorldScene(k: KAPLAYCtx) {
     // ============================================================
     // SISTEM REALTIME MULTIPLAYER (MELIHAT PEMAIN LAIN DI DUNIA)
     // ============================================================
-    const otherPlayersMap = new Map<string, { body: any; tag: any }>();
+    const otherPlayersMap = new Map<string, { body: any; tag: any; look?: any }>();
     const supabase = createClient();
 
     // 1. Muat pemain lain yang saat ini sedang berada di zona yang sama
@@ -140,17 +141,48 @@ export function registerWorldScene(k: KAPLAYCtx) {
       });
 
     function spawnOrUpdateOtherPlayer(pData: { id: string; name: string; pos_x: number; pos_y: number; look?: any }) {
+      if (!pData.id || pData.id === opts.myPlayerId) return;
+
+      const spriteKey = `player_${pData.id}`;
+
       if (otherPlayersMap.has(pData.id)) {
         const op = otherPlayersMap.get(pData.id)!;
-        // Interpolasi gerak mulus menuju posisi terbaru pemain lain
+        const dx = pData.pos_x - op.body.pos.x;
+        const dy = pData.pos_y - op.body.pos.y;
+
+        // Cek jika style penampilan pemain lain berubah (misal dari lemari)
+        if (pData.look && JSON.stringify(pData.look) !== JSON.stringify(op.look)) {
+          loadPlayerSprite(k, pData.look, spriteKey);
+          op.look = pData.look;
+        }
+
+        // Animasi gerak pemain lain
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+          if (Math.abs(dx) > Math.abs(dy)) {
+            if (op.body.curAnim() !== 'walk-side') op.body.play('walk-side');
+            op.body.flipX = dx < 0;
+          } else if (dy > 0) {
+            if (op.body.curAnim() !== 'walk-down') op.body.play('walk-down');
+            op.body.flipX = false;
+          } else {
+            if (op.body.curAnim() !== 'walk-up') op.body.play('walk-up');
+            op.body.flipX = false;
+          }
+        } else {
+          if (op.body.curAnim() !== 'idle-down') op.body.play('idle-down');
+        }
+
         op.body.pos = k.vec2(pData.pos_x, pData.pos_y);
         op.tag.pos = k.vec2(pData.pos_x, pData.pos_y - 12);
         return;
       }
 
+      // Load sprite dengan identitas penampilan unik milik pemain lain ini
+      loadPlayerSprite(k, pData.look, spriteKey);
+
       // Sprite Pemain Lain
       const otherBody = k.add([
-        k.sprite('player', { anim: 'idle-down' }),
+        k.sprite(spriteKey, { anim: 'idle-down' }),
         k.pos(pData.pos_x, pData.pos_y),
         k.area({ shape: new k.Rect(k.vec2(2, 6), 12, 10) }),
         k.anchor('center'),
@@ -166,7 +198,7 @@ export function registerWorldScene(k: KAPLAYCtx) {
         k.z(11),
       ]);
 
-      otherPlayersMap.set(pData.id, { body: otherBody, tag: otherTag });
+      otherPlayersMap.set(pData.id, { body: otherBody, tag: otherTag, look: pData.look });
     }
 
     function removeOtherPlayer(playerId: string) {

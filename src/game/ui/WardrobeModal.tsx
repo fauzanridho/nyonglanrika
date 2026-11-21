@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useGameStore } from '@/store/gameStore';
-import { updateCharacterLook, linkWithGoogle } from '@/lib/rpc';
+import { updateCharacterLook, linkWithGoogle, signOut } from '@/lib/rpc';
 import { sfx } from '@/game/audio/sfx';
 
 export interface WardrobeModalProps {
@@ -190,7 +190,7 @@ export default function WardrobeModal({ onClose, onSaved }: WardrobeModalProps) 
           </div>
         </div>
 
-        {/* Tombol Simpan & Tautkan Google */}
+        {/* Tombol Simpan & Logout */}
         <div className="space-y-2 pt-2 border-t border-white/10">
           <button
             disabled={loading}
@@ -202,11 +202,15 @@ export default function WardrobeModal({ onClose, onSaved }: WardrobeModalProps) 
 
           <button
             type="button"
-            onClick={handleLinkGoogle}
-            className="w-full text-xs bg-white hover:bg-gray-100 text-gray-800 py-2 rounded font-bold transition-colors shadow flex items-center justify-center gap-2"
+            onClick={async () => {
+              if (confirm('Apakah Anda ingin keluar dari akun ini?')) {
+                await signOut();
+              }
+            }}
+            className="w-full text-xs bg-red-900/40 hover:bg-red-800/60 text-red-200 border border-red-500/30 py-2 rounded font-bold transition-colors shadow flex items-center justify-center gap-2"
           >
-            <span>🌐</span>
-            <span>Tautkan ke Akun Google (Karakter Aman)</span>
+            <span>🚪</span>
+            <span>Keluar (Ganti Akun)</span>
           </button>
         </div>
       </div>

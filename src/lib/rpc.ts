@@ -38,6 +38,12 @@ export async function getSession() {
   return session;
 }
 
+export async function signOut() {
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+  window.location.href = '/play';
+}
+
 // ---- Character ----
 export function createCharacter(name: string, look: Record<string, string>) {
   return callRpc<string>('create_character', { p_name: name, p_look: look });
@@ -178,18 +184,24 @@ export function discoverHint(hintId: string, zone: string, x: number, y: number)
 
 // ---- Data fetching ----
 export async function getPlayer() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
   const { data, error } = await supabase
     .from('players')
     .select('*')
-    .single();
-  if (error && error.code !== 'PGRST116') throw error;
+    .eq('id', user.id)
+    .maybeSingle();
+  if (error) throw error;
   return data;
 }
 
 export async function getInventory() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
   const { data, error } = await supabase
     .from('inventory')
     .select('*')
+    .eq('player_id', user.id)
     .order('item_id');
   if (error) throw error;
   return data ?? [];
@@ -204,9 +216,12 @@ export async function getCatalog(kind?: string) {
 }
 
 export async function getCollection() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
   const { data, error } = await supabase
     .from('collection')
     .select('*')
+    .eq('player_id', user.id)
     .order('first_at', { ascending: false });
   if (error) throw error;
   return data ?? [];

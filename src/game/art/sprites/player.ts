@@ -216,7 +216,20 @@ export function buildPlayerFrame(
   return rows;
 }
 
-export function loadPlayerSprite(k: KAPLAYCtx, look?: PlayerLook) {
+export function parseLook(look: unknown): PlayerLook | undefined {
+  if (!look) return undefined;
+  if (typeof look === 'string') {
+    try {
+      return JSON.parse(look) as PlayerLook;
+    } catch {
+      return undefined;
+    }
+  }
+  return typeof look === 'object' ? (look as PlayerLook) : undefined;
+}
+
+export function loadPlayerSprite(k: KAPLAYCtx, rawLook?: unknown, name: string = 'player') {
+  const look = parseLook(rawLook);
   const palette: Record<string, string> = {
     ...DEFAULT_PALETTE,
     ...(look?.hair ? { 'H': look.hair } : {}),
@@ -236,7 +249,7 @@ export function loadPlayerSprite(k: KAPLAYCtx, look?: PlayerLook) {
     buildPlayerFrame('side', 2, look), // 8: walk side 2
   ];
 
-  makeAnimatedSprite(k, 'player', {
+  makeAnimatedSprite(k, name, {
     frames,
     palette,
     anims: {
