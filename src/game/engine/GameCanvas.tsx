@@ -21,6 +21,7 @@ import { getInventory, getMyHouse, getMyParty, getQuestsAndDiscoveries } from '@
 export default function GameCanvas() {
   const ref = useRef<HTMLCanvasElement>(null);
   const kRef = useRef<any>(null);
+  const isInitializingRef = useRef(false);
   const player = useGameStore((s) => s.player);
   const showDialog = useGameStore((s) => s.showDialog);
   const dialogNpcName = useGameStore((s) => s.dialogNpcName);
@@ -97,49 +98,78 @@ export default function GameCanvas() {
   useEffect(() => {
     let active = true;
 
+    if (isInitializingRef.current || kRef.current) return;
+    isInitializingRef.current = true;
+
     const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+
+      // Jika menekan tombol gerak / aksi di luar input form, pastikan canvas langsung terfokus
+      if (!isInput) {
+        const moveKeys = ['w', 'a', 's', 'd', 'W', 'A', 'S', 'D', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'e', 'E'];
+        if (moveKeys.includes(e.key)) {
+          if (ref.current && document.activeElement !== ref.current) {
+            ref.current.focus();
+          }
+        }
+      }
+
       if (e.key === 'b' || e.key === 'B' || e.key === 'i' || e.key === 'I') {
         sfx.playClick();
-        toggleInventory();
+        useGameStore.getState().toggleInventory();
+        setTimeout(() => ref.current?.focus(), 30);
       }
       if (e.key === 'k' || e.key === 'K') {
         sfx.playClick();
         setShowFarming((prev) => !prev);
+        setTimeout(() => ref.current?.focus(), 30);
       }
       if (e.key === 'c' || e.key === 'C') {
         sfx.playClick();
         setShowCooking((prev) => !prev);
+        setTimeout(() => ref.current?.focus(), 30);
       }
       if (e.key === 'p' || e.key === 'P') {
         sfx.playClick();
         setShowParty((prev) => !prev);
+        setTimeout(() => ref.current?.focus(), 30);
       }
       if (e.key === 'q' || e.key === 'Q' || e.key === 'j' || e.key === 'J') {
         sfx.playClick();
         setShowQuests((prev) => !prev);
+        setTimeout(() => ref.current?.focus(), 30);
       }
     };
+
+    const handlePointerUp = () => {
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) return;
+      ref.current?.focus();
+    };
+
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('pointerup', handlePointerUp);
 
     (async () => {
       const { default: kaplay } = await import('kaplay');
-      if (!active || !ref.current) return;
-      if (kRef.current) return;
+      if (!active || !ref.current || kRef.current) {
+        isInitializingRef.current = false;
+        return;
+      }
 
       const k = kaplay({
         canvas: ref.current,
         width: 480,
         height: 270,
-        scale: 2.5,
+        letterbox: true,
         crisp: true,
         global: false,
         background: [20, 24, 40],
       });
 
       kRef.current = k;
-      registerWorldScene(k);
-
-      // Daftarkan scene world jika belum
+      isInitializingRef.current = false;
       registerWorldScene(k);
 
       const currentPlayer = useGameStore.getState().player;
@@ -173,6 +203,8 @@ export default function GameCanvas() {
     return () => {
       active = false;
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('pointerup', handlePointerUp);
+      isInitializingRef.current = false;
       if (kRef.current) {
         try {
           kRef.current.quit();
@@ -180,7 +212,7 @@ export default function GameCanvas() {
         kRef.current = null;
       }
     };
-  }, [toggleInventory]);
+  }, []);
 
   const getWeatherIcon = (wName?: string) => {
     switch (wName) {
@@ -192,10 +224,18 @@ export default function GameCanvas() {
     }
   };
 
+  const focusGameCanvas = () => {
+    setTimeout(() => {
+      if (ref.current) {
+        ref.current.focus();
+      }
+    }, 30);
+  };
+
   return (
-    <div className="relative flex flex-col items-center select-none font-mono">
-      {/* Top Bar Info & Status Cuaca/WIB */}
-      <div className="absolute top-2 left-2 z-20 flex flex-wrap gap-2 text-xs bg-black/70 px-3 py-1.5 rounded text-white backdrop-blur-sm border border-white/10 shadow-lg">
+    <div className="fixed inset-0 w-screen h-screen bg-[#141828] overflow-hidden select-none font-mono flex items-center justify-center">
+      {/* Top Bar Info & Status Cuaca/WIB (Responsive) */}
+      <div className="absolute top-2 left-2 z-20 flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs bg-black/80 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-white backdrop-blur-md border border-white/10 shadow-xl max-w-[calc(100vw-16px)] sm:max-w-none">
         <div>👤 <span className="text-yellow-300 font-bold">{player?.name || 'Player'}</span></div>
         <div className="border-l border-white/20 pl-2">💰 <span className="text-amber-400 font-bold">{player?.coins ?? 0}</span></div>
         <div className="border-l border-white/20 pl-2">📍 <span className="text-emerald-400 font-bold">{currentZoneTitle}</span></div>
@@ -210,14 +250,14 @@ export default function GameCanvas() {
         )}
       </div>
 
-      {/* Top Right Action Buttons */}
-      <div className="absolute top-2 right-2 z-20 flex gap-1.5">
+      {/* Top Right Action Buttons (Responsive) */}
+      <div className="absolute top-2 right-2 z-20 flex flex-wrap justify-end gap-1 sm:gap-1.5 max-w-[55vw] sm:max-w-none">
         <button
           onClick={() => {
             sfx.playClick();
             setShowWardrobe(true);
           }}
-          className="bg-black/70 hover:bg-black/90 text-pink-300 text-xs px-2 py-1.5 rounded border border-white/10 transition-colors shadow-lg"
+          className="bg-black/80 hover:bg-black/95 text-pink-300 text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
           title="Lemari Pakaian & Akun"
         >
           👗 Lemari
@@ -228,7 +268,7 @@ export default function GameCanvas() {
             sfx.playClick();
             setShowQuests(true);
           }}
-          className="bg-black/70 hover:bg-black/90 text-amber-300 text-xs px-2 py-1.5 rounded border border-white/10 transition-colors shadow-lg"
+          className="bg-black/80 hover:bg-black/95 text-amber-300 text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
           title="Buku Quest & Jurnal Kenangan (Q)"
         >
           📜 Quest
@@ -239,7 +279,7 @@ export default function GameCanvas() {
             sfx.playClick();
             setShowParty(true);
           }}
-          className="bg-black/70 hover:bg-black/90 text-indigo-300 text-xs px-2 py-1.5 rounded border border-white/10 transition-colors shadow-lg"
+          className="bg-black/80 hover:bg-black/95 text-indigo-300 text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
           title="Party & Rumah Bersama (P)"
         >
           👥 Party
@@ -250,7 +290,7 @@ export default function GameCanvas() {
             sfx.playClick();
             setShowFarming(true);
           }}
-          className="bg-black/70 hover:bg-black/90 text-emerald-300 text-xs px-2 py-1.5 rounded border border-white/10 transition-colors shadow-lg"
+          className="bg-black/80 hover:bg-black/95 text-emerald-300 text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
           title="Kebun Rumah (K)"
         >
           🌱 Kebun
@@ -261,7 +301,7 @@ export default function GameCanvas() {
             sfx.playClick();
             setShowCooking(true);
           }}
-          className="bg-black/70 hover:bg-black/90 text-orange-300 text-xs px-2 py-1.5 rounded border border-white/10 transition-colors shadow-lg"
+          className="bg-black/80 hover:bg-black/95 text-orange-300 text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
           title="Dapur Masak (C)"
         >
           🍳 Masak
@@ -272,7 +312,7 @@ export default function GameCanvas() {
             sfx.playClick();
             toggleInventory();
           }}
-          className="bg-black/70 hover:bg-black/90 text-yellow-300 text-xs px-2 py-1.5 rounded border border-white/10 transition-colors shadow-lg"
+          className="bg-black/80 hover:bg-black/95 text-yellow-300 text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
           title="Buka Tas (B)"
         >
           🎒 Tas
@@ -283,7 +323,7 @@ export default function GameCanvas() {
             sfx.playClick();
             setShowAlbum(true);
           }}
-          className="bg-black/70 hover:bg-black/90 text-sky-300 text-xs px-2 py-1.5 rounded border border-white/10 transition-colors shadow-lg"
+          className="bg-black/80 hover:bg-black/95 text-sky-300 text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
           title="Album Koleksi"
         >
           📖 Album
@@ -291,7 +331,7 @@ export default function GameCanvas() {
 
         <button
           onClick={toggleSound}
-          className="bg-black/70 hover:bg-black/90 text-white text-xs px-2.5 py-1.5 rounded border border-white/10 transition-colors shadow-lg"
+          className="bg-black/80 hover:bg-black/95 text-white text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
           title="Bisukan / Nyalakan Suara"
         >
           {isMuted ? '🔇' : '🔊'}
@@ -311,45 +351,77 @@ export default function GameCanvas() {
         </div>
       )}
 
-      {/* Canvas Kaplay Game */}
+      {/* Canvas Kaplay Game (Fullscreen Letterbox Responsive) */}
       <canvas
         ref={ref}
+        tabIndex={0}
+        onClick={focusGameCanvas}
         style={{ imageRendering: 'pixelated' }}
-        className="border-2 border-gray-700 shadow-2xl rounded-sm"
+        className="w-full h-full max-w-full max-h-full block object-contain outline-none focus:outline-none cursor-default"
       />
 
-      {/* Modals & Dialogs */}
+      {/* Modals & Dialogs (Auto Re-focus Canvas on Close) */}
       {showDialog && (
         <DialogBox
           npcName={dialogNpcName}
           lines={dialogLines}
           isShop={isShopNpc}
-          onClose={closeDialog}
+          onClose={() => {
+            closeDialog();
+            focusGameCanvas();
+          }}
           onOpenShop={() => setShowShop(true)}
         />
       )}
 
       <InventoryModal />
 
-      {showShop && <ShopModal onClose={() => setShowShop(false)} />}
+      {showShop && (
+        <ShopModal
+          onClose={() => {
+            setShowShop(false);
+            focusGameCanvas();
+          }}
+        />
+      )}
 
-      {showAlbum && <CollectionModal onClose={() => setShowAlbum(false)} />}
+      {showAlbum && (
+        <CollectionModal
+          onClose={() => {
+            setShowAlbum(false);
+            focusGameCanvas();
+          }}
+        />
+      )}
 
       {showFarming && houseData && (
         <FarmingModal
           houseId={houseData.id}
           initialPlots={houseData.plots}
-          onClose={() => setShowFarming(false)}
+          onClose={() => {
+            setShowFarming(false);
+            focusGameCanvas();
+          }}
           onRefresh={refreshHouse}
         />
       )}
 
-      {showCooking && <CookingModal onClose={() => setShowCooking(false)} />}
+      {showCooking && (
+        <CookingModal
+          onClose={() => {
+            setShowCooking(false);
+            focusGameCanvas();
+          }}
+        />
+      )}
 
       {showParty && (
         <PartyModal
           partyData={partyData}
-          onClose={() => setShowParty(false)}
+          onClose={() => {
+            setShowParty(false);
+            focusGameCanvas();
+          }}
           onRefresh={() => {
             refreshParty();
             refreshHouse();
@@ -368,6 +440,7 @@ export default function GameCanvas() {
           onClose={() => {
             setShowHouseEditor(null);
             refreshParty();
+            focusGameCanvas();
           }}
         />
       )}
@@ -376,14 +449,20 @@ export default function GameCanvas() {
         <QuestModal
           questList={questList}
           discoveriesCount={discoveriesCount}
-          onClose={() => setShowQuests(false)}
+          onClose={() => {
+            setShowQuests(false);
+            focusGameCanvas();
+          }}
           onRefresh={refreshQuests}
         />
       )}
 
       {showWardrobe && (
         <WardrobeModal
-          onClose={() => setShowWardrobe(false)}
+          onClose={() => {
+            setShowWardrobe(false);
+            focusGameCanvas();
+          }}
           onSaved={() => {
             if (kRef.current) {
               const p = useGameStore.getState().player;
@@ -393,6 +472,7 @@ export default function GameCanvas() {
                 spawnY: p?.posY || undefined,
                 look: p?.look || {},
                 playerName: p?.name || 'Player',
+                myPlayerId: p?.id,
               });
             }
           }}
@@ -402,7 +482,10 @@ export default function GameCanvas() {
       {discoveredMemoryText && (
         <MemoryPopup
           hintText={discoveredMemoryText}
-          onClose={() => setDiscoveredMemoryText(null)}
+          onClose={() => {
+            setDiscoveredMemoryText(null);
+            focusGameCanvas();
+          }}
         />
       )}
 
@@ -416,8 +499,8 @@ export default function GameCanvas() {
         }}
       />
 
-      {/* Control Hint Bar */}
-      <div className="mt-2 text-xs text-gray-400 flex items-center gap-2">
+      {/* Control Hint Bar (Desktop only, subtle bottom) */}
+      <div className="absolute bottom-2 z-20 text-[10px] sm:text-xs text-gray-400 bg-black/75 px-3 py-1 rounded-full backdrop-blur-sm border border-white/10 hidden md:flex items-center gap-2 pointer-events-none shadow-xl">
         <span>Gerak: <kbd className="px-1.5 py-0.5 bg-gray-800 text-gray-200 rounded border border-gray-600">WASD</kbd></span>
         <span>•</span>
         <span>Aksi: <kbd className="px-1.5 py-0.5 bg-gray-800 text-gray-200 rounded border border-gray-600">E / Spasi</kbd></span>

@@ -53,6 +53,7 @@ export class FishingSystem {
   }
 
   public update(playerPos: any, spots: { id: string; x: number; y: number }[]) {
+    if (!playerPos || typeof playerPos.x !== 'number' || typeof playerPos.y !== 'number') return;
     const TILE_SIZE = 16;
     let nearSpot: { id: string; x: number; y: number } | null = null;
     let minDist = 48; // Jangkauan luas (3 tile radius)

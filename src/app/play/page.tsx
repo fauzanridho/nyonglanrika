@@ -99,11 +99,11 @@ export default function PlayPage() {
     return <CreateCharacterScreen userEmail={session.user?.email} />;
   }
 
-  // 3. Masuk ke Game Dunia Nyonglanrika
+  // 3. Masuk ke Game Dunia Nyonglanrika (Fullscreen Multi-Device)
   return (
-    <div className="min-h-screen bg-[#141828] flex items-center justify-center">
+    <main className="fixed inset-0 w-screen h-screen bg-[#141828] overflow-hidden">
       <GameCanvas />
-    </div>
+    </main>
   );
 }
 

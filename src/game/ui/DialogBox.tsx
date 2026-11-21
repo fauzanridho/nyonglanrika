@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { sfx } from '@/game/audio/sfx';
 
 export interface DialogBoxProps {
@@ -29,6 +29,24 @@ export default function DialogBox({
     }
   };
 
+  // Dengarkan tombol E, Spasi, Enter, Escape agar interaksi terasa mulus tanpa harus klik mouse
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'e' || e.key === 'E' || e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        handleNext();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKey, { capture: true });
+    return () => window.removeEventListener('keydown', handleKey, { capture: true });
+  }, [currentLineIndex, lines]);
+
   return (
     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-lg z-30 font-mono">
       <div className="bg-[#181d2f]/95 border-2 border-[#546282] rounded shadow-2xl p-4 text-white backdrop-blur-md">
@@ -38,7 +56,7 @@ export default function DialogBox({
             💬 {npcName}
           </span>
           <span className="text-[10px] text-gray-400">
-            {currentLineIndex + 1} / {lines.length}
+            {currentLineIndex + 1} / {lines.length} (E / Spasi untuk lanjut)
           </span>
         </div>
 
@@ -57,7 +75,7 @@ export default function DialogBox({
                   onClose();
                   onOpenShop();
                 }}
-                className="text-xs bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded border border-amber-400 font-bold shadow flex items-center gap-1"
+                className="text-xs bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded border border-amber-400 font-bold shadow flex items-center gap-1 cursor-pointer"
               >
                 🏪 Buka Toko Pasar
               </button>
@@ -66,9 +84,9 @@ export default function DialogBox({
 
           <button
             onClick={handleNext}
-            className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1.5 rounded border border-emerald-500 transition-colors shadow flex items-center gap-1"
+            className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1.5 rounded border border-emerald-500 transition-colors shadow flex items-center gap-1 cursor-pointer"
           >
-            {currentLineIndex < lines.length - 1 ? 'Lanjut ▶' : 'Selesai ✕'}
+            {currentLineIndex < lines.length - 1 ? 'Lanjut ▶ (Spasi)' : 'Selesai ✕ (Spasi)'}
           </button>
         </div>
       </div>

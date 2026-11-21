@@ -112,6 +112,7 @@ export function registerWorldScene(k: KAPLAYCtx) {
       k.z(12),
     ]);
     tag.onUpdate(() => {
+      if (!player?.pos) return;
       tag.pos = k.vec2(player.pos.x, player.pos.y - 12);
       const currentName = getLocalPlayerName();
       if (tag.text !== currentName) {
@@ -256,6 +257,7 @@ export function registerWorldScene(k: KAPLAYCtx) {
         ]);
 
         promptTag.onUpdate(() => {
+          if (!player?.pos) return;
           const dist = Math.hypot(player.pos.x - (mo.x * TILE_SIZE + 8), player.pos.y - (mo.y * TILE_SIZE + 8));
           promptTag.opacity = dist < 32 ? 1 : 0;
         });
@@ -266,6 +268,7 @@ export function registerWorldScene(k: KAPLAYCtx) {
 
     // Kamera mengikuti pemain & update spot pancing
     player.onUpdate(() => {
+      if (!player?.pos) return;
       k.setCamPos(player.pos);
       if (zoneDef.fishSpots && zoneDef.fishSpots.length > 0) {
         fishingSys.update(player.pos, zoneDef.fishSpots);
@@ -306,6 +309,7 @@ export function registerWorldScene(k: KAPLAYCtx) {
       ]);
 
       interactIndicator.onUpdate(() => {
+        if (!player?.pos) return;
         const dist = Math.hypot(player.pos.x - npcDef.x, player.pos.y - npcDef.y);
         interactIndicator.opacity = dist < 28 ? 1 : 0;
       });
@@ -313,6 +317,8 @@ export function registerWorldScene(k: KAPLAYCtx) {
 
     // Handle Interaksi Tombol (E & Spasi)
     const handleInteractE = async () => {
+      if (useGameStore.getState().showDialog) return;
+
       let nearestMemory: any = null;
       let minMemDist = 36;
       memoryObjList.forEach((m) => {
@@ -376,6 +382,16 @@ export function registerWorldScene(k: KAPLAYCtx) {
     let stepTimer = 0;
 
     function handleMovement() {
+      if (!player?.pos) return;
+      if (useGameStore.getState().showDialog) {
+        if (isMoving) {
+          const idleAnim = lastDir === 'side' ? 'idle-side' : `idle-${lastDir}`;
+          player.play(idleAnim);
+          isMoving = false;
+        }
+        return;
+      }
+
       let moveX = 0;
       let moveY = 0;
 
@@ -465,6 +481,7 @@ export function registerWorldScene(k: KAPLAYCtx) {
         ]);
 
         portalObj.onUpdate(() => {
+          if (!player?.pos) return;
           const dist = Math.hypot(player.pos.x - p.x * TILE_SIZE, player.pos.y - p.y * TILE_SIZE);
           labelTag.opacity = dist < 32 ? 1 : 0;
         });
@@ -497,9 +514,10 @@ export function registerWorldScene(k: KAPLAYCtx) {
     }
 
     // Sync broadcast posisi berkala (tiap 1.5 detik jika bergerak) agar pemain lain melihat posisi terkini
-    let lastSavedX = player.pos.x;
-    let lastSavedY = player.pos.y;
+    let lastSavedX = player?.pos?.x ?? 0;
+    let lastSavedY = player?.pos?.y ?? 0;
     const saveInterval = setInterval(() => {
+      if (!player?.pos) return;
       const dist = Math.hypot(player.pos.x - lastSavedX, player.pos.y - lastSavedY);
       if (dist > 8) {
         lastSavedX = player.pos.x;
@@ -509,6 +527,7 @@ export function registerWorldScene(k: KAPLAYCtx) {
     }, 1500);
 
     const handleBeforeUnload = () => {
+      if (!player?.pos) return;
       saveState(currentZoneId, Math.round(player.pos.x), Math.round(player.pos.y)).catch(console.error);
     };
     if (typeof window !== 'undefined') {
