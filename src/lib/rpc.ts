@@ -22,9 +22,12 @@ export async function signInAnonymously() {
 }
 
 export async function linkWithGoogle() {
+  const redirectUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/auth/callback?next=/play`
+    : '/play';
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: `${window.location.origin}/play` },
+    options: { redirectTo: redirectUrl },
   });
   if (error) throw error;
   return data;
