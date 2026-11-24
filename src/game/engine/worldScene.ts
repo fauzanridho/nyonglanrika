@@ -1,6 +1,7 @@
 // ============================================================
 // Scene World: Alun-alun, Gerak Pemain, Kamera, Tabrakan, Autosave,
 // Cuaca, Waktu WIB, SFX, NPC, Mancing, Kenangan & REALTIME MULTIPLAYER
+// — Menggunakan Supabase Realtime Presence untuk tracking online/offline
 // ============================================================
 
 import type { KAPLAYCtx } from 'kaplay';
@@ -61,8 +62,8 @@ export function registerWorldScene(k: KAPLAYCtx) {
       'R': () => [k.sprite('water'), k.area(), k.body({ isStatic: true }), 'obstacle', 'water'],
       'P': () => [k.sprite('pine'), k.area(), k.body({ isStatic: true }), 'obstacle'],
       'B': () => [k.sprite('paving')],
-      'S': () => [k.sprite('bench'), k.area(), k.body({ isStatic: true }), 'obstacle'],
-      'r': () => [k.sprite('paving')],
+      'S': () => [k.sprite('stall'), k.area(), k.body({ isStatic: true }), 'obstacle'],
+      'r': () => [k.sprite('rail')],
       '.': () => [k.sprite('grass')],
       ' ': () => [k.sprite('grass')],
     };
@@ -121,28 +122,27 @@ export function registerWorldScene(k: KAPLAYCtx) {
     });
 
     // ============================================================
-    // SISTEM REALTIME MULTIPLAYER (MELIHAT PEMAIN LAIN DI DUNIA)
+    // SISTEM REALTIME MULTIPLAYER — PRESENCE-BASED
+    // Menggunakan Supabase Realtime Presence agar pemain offline
+    // otomatis hilang dari dunia (tidak ada "ghost player").
     // ============================================================
     const otherPlayersMap = new Map<string, { body: any; tag: any; look?: any }>();
     const supabase = createClient();
 
-    // 1. Muat pemain lain yang saat ini sedang berada di zona yang sama
-    supabase
-      .from('players')
-      .select('id, name, pos_x, pos_y, look, zone')
-      .eq('zone', currentZoneId)
-      .then(({ data }) => {
-        if (data) {
-          data.forEach((p) => {
-            if (p.id !== opts.myPlayerId) {
-              spawnOrUpdateOtherPlayer(p);
-            }
-          });
-        }
-      });
-
-    function spawnOrUpdateOtherPlayer(pData: { id: string; name: string; pos_x: number; pos_y: number; look?: any }) {
+    function spawnOrUpdateOtherPlayer(pData: {
+      id: string;
+      name: string;
+      pos_x: number;
+      pos_y: number;
+      look?: any;
+      zone?: string;
+    }) {
       if (!pData.id || pData.id === opts.myPlayerId) return;
+      // Jika pemain berada di zona lain, hapus dari tampilan
+      if (pData.zone && pData.zone !== currentZoneId) {
+        removeOtherPlayer(pData.id);
+        return;
+      }
 
       const spriteKey = `player_${pData.id}`;
 
@@ -151,7 +151,7 @@ export function registerWorldScene(k: KAPLAYCtx) {
         const dx = pData.pos_x - op.body.pos.x;
         const dy = pData.pos_y - op.body.pos.y;
 
-        // Cek jika style penampilan pemain lain berubah (misal dari lemari)
+        // Cek jika style penampilan pemain lain berubah
         if (pData.look && JSON.stringify(pData.look) !== JSON.stringify(op.look)) {
           loadPlayerSprite(k, pData.look, spriteKey);
           op.look = pData.look;
@@ -175,13 +175,13 @@ export function registerWorldScene(k: KAPLAYCtx) {
 
         op.body.pos = k.vec2(pData.pos_x, pData.pos_y);
         op.tag.pos = k.vec2(pData.pos_x, pData.pos_y - 12);
+        op.tag.text = pData.name;
         return;
       }
 
-      // Load sprite dengan identitas penampilan unik milik pemain lain ini
+      // Load sprite dengan identitas penampilan unik
       loadPlayerSprite(k, pData.look, spriteKey);
 
-      // Sprite Pemain Lain
       const otherBody = k.add([
         k.sprite(spriteKey, { anim: 'idle-down' }),
         k.pos(pData.pos_x, pData.pos_y),
@@ -195,7 +195,7 @@ export function registerWorldScene(k: KAPLAYCtx) {
         k.text(pData.name, { size: 6 }),
         k.pos(pData.pos_x, pData.pos_y - 12),
         k.anchor('center'),
-        k.color(140, 240, 255), // Warna biru muda khas pemain online lain
+        k.color(140, 240, 255),
         k.z(11),
       ]);
 
@@ -213,7 +213,68 @@ export function registerWorldScene(k: KAPLAYCtx) {
       }
     }
 
-    // 2. Berlangganan Realtime Supabase untuk perubahan posisi pemain di dunia
+    // --- Supabase Realtime Presence Channel ---
+    // Setiap klien men-track presence-nya sendiri.
+    // Ketika klien disconnect / tutup browser, Supabase otomatis menghapus
+    // presence record-nya => client lain langsung tahu dan menghapus avatar.
+    const presenceChannel = supabase.channel(`presence_zone_${currentZoneId}`, {
+      config: { presence: { key: opts.myPlayerId || 'unknown' } },
+    });
+
+    // Track siapa yang online & posisinya
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const presenceState = presenceChannel.presenceState<{
+          id: string;
+          name: string;
+          pos_x: number;
+          pos_y: number;
+          look?: any;
+          zone?: string;
+        }>();
+
+        // ID pemain yang sekarang ONLINE di zona ini
+        const onlineIds = new Set<string>();
+
+        for (const [key, entries] of Object.entries(presenceState)) {
+          if (key === opts.myPlayerId) continue;
+          const latest = entries[entries.length - 1];
+          if (latest && latest.zone === currentZoneId) {
+            onlineIds.add(key);
+            spawnOrUpdateOtherPlayer(latest);
+          }
+        }
+
+        // Hapus pemain yang sudah OFFLINE (tidak ada di presenceState lagi)
+        for (const [existingId] of otherPlayersMap) {
+          if (!onlineIds.has(existingId)) {
+            removeOtherPlayer(existingId);
+          }
+        }
+      })
+      .on('presence', { event: 'leave' }, ({ key }) => {
+        // Pemain langsung hilang saat disconnect
+        if (key && key !== opts.myPlayerId) {
+          removeOtherPlayer(key);
+        }
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          // Broadcast presence saya sendiri
+          const freshPlayer = useGameStore.getState().player;
+          await presenceChannel.track({
+            id: opts.myPlayerId,
+            name: freshPlayer?.name || opts.playerName || 'Player',
+            pos_x: startX,
+            pos_y: startY,
+            look: freshPlayer?.look || opts.look || {},
+            zone: currentZoneId,
+          });
+        }
+      });
+
+    // Juga tetap dengarkan postgres_changes untuk UPDATE posisi realtime
+    // (lebih granular daripada presence sync yang lebih lambat)
     const worldChannel = supabase
       .channel(`world_zone_${currentZoneId}`)
       .on(
@@ -223,11 +284,9 @@ export function registerWorldScene(k: KAPLAYCtx) {
           const newRow = payload.new;
           if (!newRow || newRow.id === opts.myPlayerId) return;
 
-          // Jika pemain berada di zona yang sama: Munculkan / Update posisinya
           if (newRow.zone === currentZoneId) {
             spawnOrUpdateOtherPlayer(newRow);
           } else {
-            // Jika pindah zona lain, hilangkan dari zona saat ini
             removeOtherPlayer(newRow.id);
           }
         }
@@ -292,16 +351,16 @@ export function registerWorldScene(k: KAPLAYCtx) {
       ]);
 
       k.add([
-        k.text(npcDef.name, { size: 5 }),
-        k.pos(npcDef.x, npcDef.y - 11),
+        k.text(npcDef.name, { size: 6 }),
+        k.pos(npcDef.x, npcDef.y - 12),
         k.anchor('center'),
-        k.color(240, 240, 180),
+        k.color(255, 240, 140),
         k.z(11),
       ]);
 
       const interactIndicator = k.add([
         k.text('E: Bicara', { size: 5 }),
-        k.pos(npcDef.x, npcDef.y - 18),
+        k.pos(npcDef.x, npcDef.y - 19),
         k.anchor('center'),
         k.color(255, 230, 80),
         k.opacity(0),
@@ -454,16 +513,17 @@ export function registerWorldScene(k: KAPLAYCtx) {
     // Papan / Sign Portal Antar-Zona
     if (zoneDef.portals && zoneDef.portals.length > 0) {
       zoneDef.portals.forEach((p) => {
+        // Strip indikator portal (subtle)
         k.add([
           k.rect(TILE_SIZE * 2, 4),
           k.pos((p.x - 0.5) * TILE_SIZE, p.y * TILE_SIZE + 6),
           k.color(255, 230, 100),
-          k.opacity(0.4),
+          k.opacity(0.3),
           k.z(2),
         ]);
 
         const labelTag = k.add([
-          k.text(p.label, { size: 5 }),
+          k.text(p.label, { size: 6 }),
           k.pos(p.x * TILE_SIZE, p.y * TILE_SIZE - (p.y === 0 ? -12 : 8)),
           k.anchor('center'),
           k.color(255, 240, 160),
@@ -495,6 +555,7 @@ export function registerWorldScene(k: KAPLAYCtx) {
           weatherSys.destroy();
           fishingSys.destroy();
           supabase.removeChannel(worldChannel);
+          presenceChannel.untrack().then(() => supabase.removeChannel(presenceChannel)).catch(() => {});
           const freshPlayer = useGameStore.getState().player;
           k.go('world', {
             zoneId: p.to,
@@ -513,7 +574,8 @@ export function registerWorldScene(k: KAPLAYCtx) {
       });
     }
 
-    // Sync broadcast posisi berkala (tiap 1.5 detik jika bergerak) agar pemain lain melihat posisi terkini
+    // Sync broadcast posisi berkala (tiap 1.5 detik jika bergerak)
+    // Sekarang JUGA update Presence agar klien lain bisa lihat posisi terbaru
     let lastSavedX = player?.pos?.x ?? 0;
     let lastSavedY = player?.pos?.y ?? 0;
     const saveInterval = setInterval(() => {
@@ -522,19 +584,33 @@ export function registerWorldScene(k: KAPLAYCtx) {
       if (dist > 8) {
         lastSavedX = player.pos.x;
         lastSavedY = player.pos.y;
+        // Simpan ke DB
         saveState(currentZoneId, Math.round(player.pos.x), Math.round(player.pos.y)).catch(console.error);
+        // Update presence agar pemain lain lihat posisi terbaru
+        const freshPlayer = useGameStore.getState().player;
+        presenceChannel.track({
+          id: opts.myPlayerId,
+          name: freshPlayer?.name || opts.playerName || 'Player',
+          pos_x: Math.round(player.pos.x),
+          pos_y: Math.round(player.pos.y),
+          look: freshPlayer?.look || opts.look || {},
+          zone: currentZoneId,
+        }).catch(() => {});
       }
     }, 1500);
 
     const handleBeforeUnload = () => {
       if (!player?.pos) return;
       saveState(currentZoneId, Math.round(player.pos.x), Math.round(player.pos.y)).catch(console.error);
+      // Untrack presence agar avatar langsung hilang
+      presenceChannel.untrack().catch(() => {});
     };
     if (typeof window !== 'undefined') {
       window.addEventListener('beforeunload', handleBeforeUnload);
     }
 
     k.onDestroy(() => {
+      presenceChannel.untrack().then(() => supabase.removeChannel(presenceChannel)).catch(() => {});
       supabase.removeChannel(worldChannel);
       weatherSys.destroy();
       fishingSys.destroy();

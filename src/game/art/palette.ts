@@ -28,6 +28,14 @@ export const DEFAULT_PALETTE: Record<string, string> = {
   'L': '#ffe266', // Lentera / lampu menyala
   'l': '#998433', // Tiang lentera mati
 
+  // Tambahan Dekorasi Dunia
+  'f': '#66b847', // Bunga / rumput hias terang
+  'n': '#c45834', // Bunga merah / neon sign
+  'o': '#e88f40', // Bunga oranye / dekorasi hangat
+  'p': '#d699e8', // Bunga ungu / sakura
+  'i': '#a3c7dd', // Es / ubin dingin
+  'k': '#3d3528', // Kayu tua / pagar tua
+
   // Karakter (bisa di-override per player look)
   'H': '#3a2010', // Rambut default
   'S': '#f2be9b', // Kulit default

@@ -33,39 +33,34 @@ export interface ZoneDef {
 export const ZONES: Record<string, ZoneDef> = {
   // ============================================================
   // 1. ALUN-ALUN PURWOKERTO (Pusat Kota)
-  // Portal Bawah-Kiri (x:4, y:15)  -> Pasar Wage (x:4, y:2)
-  // Portal Bawah-Kanan (x:25, y:15) -> Sungai Serayu (x:15, y:2)
-  // Portal Atas-Tengah (x:15, y:0) -> Stasiun (x:15, y:13)
+  // Taman kota dengan pepohonan rindang, bangku, lentera
   // ============================================================
   alun_alun: {
     id: 'alun_alun',
     name: 'Alun-alun Purwokerto',
     grid: [
-      'TTTTTTTTTTTTTT..TTTTTTTTTTTTTT', // y:0 (Portal ke Stasiun di x:14-15)
+      'TTTTTTTTTTTTTT..TTTTTTTTTTTTTT', // y:0 (Portal ke Stasiun)
       'T............................T', // y:1
       'T............................T', // y:2
-      'T..bb..........bb............T', // y:3
+      'T..bb......L.....bb..........T', // y:3
       'T............................T', // y:4
-      'T............L...............T', // y:5
+      'T.........T..........T.......T', // y:5
       'T............................T', // y:6
       'T............................T', // y:7
-      'T..bb..........bb............T', // y:8
+      'T..bb......L.....bb..........T', // y:8
       'T............................T', // y:9
       'T............................T', // y:10
-      'T............................T', // y:11
+      'T.........T..........T.......T', // y:11
       'T............L...............T', // y:12
       'T............................T', // y:13
       'T............................T', // y:14
-      'TTTT..TTTTTTTTTTTTTTTTTT..TTTT', // y:15 (Portal Pasar Wage x:4-5, Serayu x:24-25)
+      'TTTT..TTTTTTTTTTTTTTTTTT..TTTT', // y:15 (Portal Pasar Wage & Serayu)
     ],
     spawnX: 15 * 16,
     spawnY: 7 * 16,
     portals: [
-      // Ke Stasiun (Utara)
       { to: 'stasiun', x: 15, y: 0, spawnX: 15 * 16, spawnY: 13 * 16, label: 'Ke Stasiun Purwokerto' },
-      // Ke Pasar Wage (Barat Daya)
       { to: 'pasar_wage', x: 5, y: 15, spawnX: 15 * 16, spawnY: 2 * 16, label: 'Ke Pasar Wage' },
-      // Ke Sungai Serayu (Tenggara)
       { to: 'sungai_serayu', x: 25, y: 15, spawnX: 15 * 16, spawnY: 2 * 16, label: 'Ke Tepi Sungai Serayu' },
     ],
     npcs: ['npc_pak_camat'],
@@ -77,17 +72,16 @@ export const ZONES: Record<string, ZoneDef> = {
 
   // ============================================================
   // 2. PASAR WAGE (Pusat Perbelanjaan & Ekonomi)
-  // Masuk dari Alun-alun di Utara (x:15, y:1)
-  // Portal Keluar kembali ke Alun-alun di Utara (x:15, y:0)
+  // Pasar tradisional dengan kios-kios berderet
   // ============================================================
   pasar_wage: {
     id: 'pasar_wage',
     name: 'Pasar Wage',
     grid: [
-      'BBBBBBBBBBBBTT..TTBBBBBBBBBBBB', // y:0 (Pintu kembali ke Alun-alun di x:14-15)
+      'BBBBBBBBBBBBTT..TTBBBBBBBBBBBB', // y:0 (Pintu kembali ke Alun-alun)
       'B............................B', // y:1
       'B............................B', // y:2 (Spawn dari Alun-alun)
-      'B....S.....S.....S.....S.....B', // y:3 Kios Bu Warni & pedagang
+      'B....S.....S.....S.....S.....B', // y:3 Kios pedagang
       'B............................B', // y:4
       'B............................B', // y:5
       'B....S.....S.....S.....S.....B', // y:6 Kios
@@ -111,30 +105,25 @@ export const ZONES: Record<string, ZoneDef> = {
 
   // ============================================================
   // 3. TEPI SUNGAI SERAYU (Spot Mancing & Suasana Alam)
-  // Masuk dari Alun-alun di Utara (x:15, y:1)
-  // Portal Kembali ke Alun-alun di Utara (x:15, y:0)
-  // Portal ke Baturraden di Timur (x:29, y:3)
-  // Air mengalir di selatan (y:7 s/d y:12)
-  // Spot pancing di bibir air y:7
   // ============================================================
   sungai_serayu: {
     id: 'sungai_serayu',
     name: 'Tepi Sungai Serayu',
     grid: [
-      'TTTTTTTTTTTTTT..TTTTTTTTTTTTTT', // y:0 (Pintu kembali ke Alun-alun di x:14-15)
+      'TTTTTTTTTTTTTT..TTTTTTTTTTTTTT', // y:0 (Portal ke Alun-alun)
       'T............................T', // y:1
       'T............................T', // y:2 (Spawn dari Alun-alun)
-      'T.............................', // y:3 (Jalan ke Baturraden di x:29)
+      'T.............................', // y:3 (Jalan ke Baturraden)
       'T.............................', // y:4
       'T............................T', // y:5 Tepian rumput
-      'T..b.......b.......b.......b.T', // y:6 Bangku istirahat memancing
-      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', // y:7 Permukaan air sungai (spot mancing)
+      'T..b.......b.......b.......b.T', // y:6 Bangku memancing
+      'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', // y:7 Sungai
       'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', // y:8
       'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', // y:9
       'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', // y:10
       'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', // y:11
       'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW', // y:12
-      'T............................T', // y:13 Seberang sungai
+      'T............................T', // y:13
       'T............................T', // y:14
       'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT', // y:15
     ],
@@ -155,7 +144,6 @@ export const ZONES: Record<string, ZoneDef> = {
 
   // ============================================================
   // 4. STASIUN PURWOKERTO
-  // Masuk dari Alun-alun di Selatan (x:15, y:14)
   // ============================================================
   stasiun: {
     id: 'stasiun',
@@ -176,7 +164,7 @@ export const ZONES: Record<string, ZoneDef> = {
       'B............................B', // y:12
       'B............................B', // y:13
       'B.............BB.............B', // y:14
-      'BBBBBBBBBBBBTT..TTBBBBBBBBBBBB', // y:15 (Kembali ke Alun-alun x:14-15)
+      'BBBBBBBBBBBBTT..TTBBBBBBBBBBBB', // y:15
     ],
     spawnX: 15 * 16,
     spawnY: 13 * 16,
@@ -188,7 +176,6 @@ export const ZONES: Record<string, ZoneDef> = {
 
   // ============================================================
   // 5. BATURRADEN (Dataran Tinggi & Telaga Sunyi)
-  // Masuk dari Sungai Serayu di Barat (x:1, y:5)
   // ============================================================
   baturraden: {
     id: 'baturraden',
@@ -199,7 +186,7 @@ export const ZONES: Record<string, ZoneDef> = {
       'P....P....P....P....P........P', // y:2
       'P............................P', // y:3
       'P............................P', // y:4
-      '.....P....P....P....P........P', // y:5 (Jalan masuk dari Serayu di x:0)
+      '.....P....P....P....P........P', // y:5 (Jalan masuk dari Serayu)
       'P............................P', // y:6
       'P............................P', // y:7
       'P..WWWWWWWWWW................P', // y:8 Curug Cipendok
@@ -207,7 +194,7 @@ export const ZONES: Record<string, ZoneDef> = {
       'P............................P', // y:10
       'P............................P', // y:11
       'P............WWWWWW..........P', // y:12 Telaga Sunyi
-      'P............WWWWWW..........P', // y:13 (Spot mancing telaga_sunyi)
+      'P............WWWWWW..........P', // y:13
       'P............WWWWWW..........P', // y:14
       'PPPPPPPPPPPPPPPPPPPPPPPPPPPPPP', // y:15
     ],

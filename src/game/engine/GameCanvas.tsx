@@ -26,7 +26,6 @@ export default function GameCanvas() {
   const showDialog = useGameStore((s) => s.showDialog);
   const dialogNpcName = useGameStore((s) => s.dialogNpcName);
   const dialogLines = useGameStore((s) => s.dialogLines);
-  const openDialog = useGameStore((s) => s.openDialog);
   const closeDialog = useGameStore((s) => s.closeDialog);
   const weather = useGameStore((s) => s.weather);
   const toggleInventory = useGameStore((s) => s.toggleInventory);
@@ -105,7 +104,6 @@ export default function GameCanvas() {
       const activeEl = document.activeElement;
       const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
 
-      // Jika menekan tombol gerak / aksi di luar input form, pastikan canvas langsung terfokus
       if (!isInput) {
         const moveKeys = ['w', 'a', 's', 'd', 'W', 'A', 'S', 'D', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'e', 'E'];
         if (moveKeys.includes(e.key)) {
@@ -233,114 +231,77 @@ export default function GameCanvas() {
   };
 
   return (
-    <div className="fixed inset-0 w-screen h-screen bg-[#141828] overflow-hidden select-none font-mono flex items-center justify-center">
-      {/* Top Bar Info & Status Cuaca/WIB (Responsive) */}
-      <div className="absolute top-2 left-2 z-20 flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs bg-black/80 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-white backdrop-blur-md border border-white/10 shadow-xl max-w-[calc(100vw-16px)] sm:max-w-none">
-        <div>👤 <span className="text-yellow-300 font-bold">{player?.name || 'Player'}</span></div>
-        <div className="border-l border-white/20 pl-2">💰 <span className="text-amber-400 font-bold">{player?.coins ?? 0}</span></div>
-        <div className="border-l border-white/20 pl-2">📍 <span className="text-emerald-400 font-bold">{currentZoneTitle}</span></div>
-        <div className="border-l border-white/20 pl-2 text-sky-300">{getWeatherIcon(weather?.weather)}</div>
-        <div className="border-l border-white/20 pl-2 text-amber-200">
-          🕒 {weather?.hour !== undefined ? `${String(weather.hour).padStart(2, '0')}:00 WIB` : 'WIB'}
-        </div>
-        {activeBuff && activeBuff.expiresAt > Date.now() && (
-          <div className="border-l border-white/20 pl-2 text-emerald-300 animate-pulse">
-            ✨ Buff {activeBuff.type.replace('_', ' ')}
+    <div className="fixed inset-0 w-screen h-screen bg-[#0e1117] overflow-hidden select-none font-mono flex items-center justify-center">
+      {/* ═══ TOP HUD BAR ═══ */}
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-2 py-1.5 sm:px-3 sm:py-2 bg-gradient-to-b from-black/90 via-black/70 to-transparent pointer-events-none">
+        {/* Left: Player Info */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 text-[10px] sm:text-xs pointer-events-auto">
+          <div className="flex items-center gap-1 bg-black/50 px-2 py-0.5 rounded-full border border-yellow-500/30">
+            <span className="text-yellow-400">👤</span>
+            <span className="text-yellow-200 font-bold truncate max-w-[70px] sm:max-w-none">{player?.name || 'Player'}</span>
           </div>
-        )}
+          <div className="flex items-center gap-1 bg-black/50 px-2 py-0.5 rounded-full border border-amber-500/30">
+            <span className="text-amber-400">💰</span>
+            <span className="text-amber-200 font-bold">{player?.coins ?? 0}</span>
+          </div>
+        </div>
+
+        {/* Center: Zone */}
+        <div className="flex items-center gap-1 text-[10px] sm:text-xs pointer-events-auto">
+          <div className="bg-black/50 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+            <span className="text-emerald-300 font-bold">📍 {currentZoneTitle}</span>
+          </div>
+        </div>
+
+        {/* Right: Weather & Time */}
+        <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs pointer-events-auto">
+          <div className="bg-black/50 px-2 py-0.5 rounded-full border border-sky-500/30">
+            <span className="text-sky-200">{getWeatherIcon(weather?.weather)}</span>
+          </div>
+          <div className="bg-black/50 px-2 py-0.5 rounded-full border border-orange-500/30">
+            <span className="text-orange-200">🕒 {weather?.hour !== undefined ? `${String(weather.hour).padStart(2, '0')}:00` : '--:--'}</span>
+          </div>
+          {activeBuff && activeBuff.expiresAt > Date.now() && (
+            <div className="bg-emerald-900/60 px-2 py-0.5 rounded-full border border-emerald-400/40 animate-pulse">
+              <span className="text-emerald-300 text-[9px] sm:text-[10px]">✨ Buff</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Top Right Action Buttons (Responsive) */}
-      <div className="absolute top-2 right-2 z-20 flex flex-wrap justify-end gap-1 sm:gap-1.5 max-w-[55vw] sm:max-w-none">
-        <button
-          onClick={() => {
-            sfx.playClick();
-            setShowWardrobe(true);
-          }}
-          className="bg-black/80 hover:bg-black/95 text-pink-300 text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
-          title="Lemari Pakaian & Akun"
-        >
-          👗 Lemari
-        </button>
-
-        <button
-          onClick={() => {
-            sfx.playClick();
-            setShowQuests(true);
-          }}
-          className="bg-black/80 hover:bg-black/95 text-amber-300 text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
-          title="Buku Quest & Jurnal Kenangan (Q)"
-        >
-          📜 Quest
-        </button>
-
-        <button
-          onClick={() => {
-            sfx.playClick();
-            setShowParty(true);
-          }}
-          className="bg-black/80 hover:bg-black/95 text-indigo-300 text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
-          title="Party & Rumah Bersama (P)"
-        >
-          👥 Party
-        </button>
-
-        <button
-          onClick={() => {
-            sfx.playClick();
-            setShowFarming(true);
-          }}
-          className="bg-black/80 hover:bg-black/95 text-emerald-300 text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
-          title="Kebun Rumah (K)"
-        >
-          🌱 Kebun
-        </button>
-
-        <button
-          onClick={() => {
-            sfx.playClick();
-            setShowCooking(true);
-          }}
-          className="bg-black/80 hover:bg-black/95 text-orange-300 text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
-          title="Dapur Masak (C)"
-        >
-          🍳 Masak
-        </button>
-
-        <button
-          onClick={() => {
-            sfx.playClick();
-            toggleInventory();
-          }}
-          className="bg-black/80 hover:bg-black/95 text-yellow-300 text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
-          title="Buka Tas (B)"
-        >
-          🎒 Tas
-        </button>
-
-        <button
-          onClick={() => {
-            sfx.playClick();
-            setShowAlbum(true);
-          }}
-          className="bg-black/80 hover:bg-black/95 text-sky-300 text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
-          title="Album Koleksi"
-        >
-          📖 Album
-        </button>
-
+      {/* ═══ RIGHT SIDE ACTION BUTTONS ═══ */}
+      <div className="absolute top-10 right-1.5 sm:top-12 sm:right-2 z-20 flex flex-col gap-1 sm:gap-1.5">
+        {[
+          { icon: '👗', label: 'Lemari', color: 'pink', onClick: () => setShowWardrobe(true) },
+          { icon: '📜', label: 'Quest', color: 'amber', onClick: () => setShowQuests(true) },
+          { icon: '👥', label: 'Party', color: 'indigo', onClick: () => setShowParty(true) },
+          { icon: '🌱', label: 'Kebun', color: 'emerald', onClick: () => setShowFarming(true) },
+          { icon: '🍳', label: 'Masak', color: 'orange', onClick: () => setShowCooking(true) },
+          { icon: '🎒', label: 'Tas', color: 'yellow', onClick: () => toggleInventory() },
+          { icon: '📖', label: 'Album', color: 'sky', onClick: () => setShowAlbum(true) },
+        ].map((btn) => (
+          <button
+            key={btn.label}
+            onClick={() => { sfx.playClick(); btn.onClick(); }}
+            className={`bg-black/70 hover:bg-black/90 text-${btn.color}-300 text-[10px] sm:text-[11px] pl-1.5 pr-2 py-1 sm:py-1.5 rounded-l-lg border border-r-0 border-white/10 transition-all hover:translate-x-[-2px] shadow-lg cursor-pointer flex items-center gap-1 whitespace-nowrap`}
+            title={btn.label}
+          >
+            <span>{btn.icon}</span>
+            <span className="hidden sm:inline">{btn.label}</span>
+          </button>
+        ))}
         <button
           onClick={toggleSound}
-          className="bg-black/80 hover:bg-black/95 text-white text-[11px] sm:text-xs px-2 py-1 sm:px-2.5 sm:py-1.5 rounded border border-white/10 transition-colors shadow-lg cursor-pointer"
-          title="Bisukan / Nyalakan Suara"
+          className="bg-black/70 hover:bg-black/90 text-white text-[10px] sm:text-[11px] pl-1.5 pr-2 py-1 sm:py-1.5 rounded-l-lg border border-r-0 border-white/10 transition-all hover:translate-x-[-2px] shadow-lg cursor-pointer flex items-center gap-1"
+          title="Suara"
         >
-          {isMuted ? '🔇' : '🔊'}
+          <span>{isMuted ? '🔇' : '🔊'}</span>
         </button>
       </div>
 
       {/* Fishing Action Banner */}
       {fishingBanner && (
-        <div className={`absolute top-12 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded shadow-2xl text-xs font-bold border ${
+        <div className={`absolute top-10 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-lg shadow-2xl text-[11px] sm:text-xs font-bold border ${
           fishingBanner.status === 'bite'
             ? 'bg-red-600/90 text-white border-red-400 animate-bounce'
             : fishingBanner.status === 'result'
@@ -499,23 +460,21 @@ export default function GameCanvas() {
         }}
       />
 
-      {/* Control Hint Bar (Desktop only, subtle bottom) */}
-      <div className="absolute bottom-2 z-20 text-[10px] sm:text-xs text-gray-400 bg-black/75 px-3 py-1 rounded-full backdrop-blur-sm border border-white/10 hidden md:flex items-center gap-2 pointer-events-none shadow-xl">
-        <span>Gerak: <kbd className="px-1.5 py-0.5 bg-gray-800 text-gray-200 rounded border border-gray-600">WASD</kbd></span>
-        <span>•</span>
-        <span>Aksi: <kbd className="px-1.5 py-0.5 bg-gray-800 text-gray-200 rounded border border-gray-600">E / Spasi</kbd></span>
-        <span>•</span>
-        <span>Lemari: 👗</span>
-        <span>•</span>
-        <span>Quest: <kbd className="px-1.5 py-0.5 bg-gray-800 text-gray-200 rounded border border-gray-600">Q</kbd></span>
-        <span>•</span>
-        <span>Party: <kbd className="px-1.5 py-0.5 bg-gray-800 text-gray-200 rounded border border-gray-600">P</kbd></span>
-        <span>•</span>
-        <span>Kebun: <kbd className="px-1.5 py-0.5 bg-gray-800 text-gray-200 rounded border border-gray-600">K</kbd></span>
-        <span>•</span>
-        <span>Masak: <kbd className="px-1.5 py-0.5 bg-gray-800 text-gray-200 rounded border border-gray-600">C</kbd></span>
-        <span>•</span>
-        <span>Tas: <kbd className="px-1.5 py-0.5 bg-gray-800 text-gray-200 rounded border border-gray-600">B</kbd></span>
+      {/* Control Hint Bar (Desktop only, bottom center) */}
+      <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 z-20 text-[9px] sm:text-[10px] text-gray-500 bg-black/60 px-3 py-1 rounded-full backdrop-blur-sm border border-white/5 hidden md:flex items-center gap-2 pointer-events-none">
+        <span>WASD <span className="text-gray-400">gerak</span></span>
+        <span className="text-gray-600">•</span>
+        <span>E/Spasi <span className="text-gray-400">aksi</span></span>
+        <span className="text-gray-600">•</span>
+        <span>Q <span className="text-gray-400">quest</span></span>
+        <span className="text-gray-600">•</span>
+        <span>B <span className="text-gray-400">tas</span></span>
+        <span className="text-gray-600">•</span>
+        <span>K <span className="text-gray-400">kebun</span></span>
+        <span className="text-gray-600">•</span>
+        <span>C <span className="text-gray-400">masak</span></span>
+        <span className="text-gray-600">•</span>
+        <span>P <span className="text-gray-400">party</span></span>
       </div>
     </div>
   );
