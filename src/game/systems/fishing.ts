@@ -43,21 +43,22 @@ export class FishingSystem {
 
     // Latar pill gelap + prompt mengambang di atas spot saat pemain mendekat
     this.spotPromptBg = this.k.add([
-      this.k.rect(96, 11, { radius: 2 }),
+      this.k.rect(68, 7.5, { radius: 1.5 }),
       this.k.pos(0, 0),
       this.k.anchor('center'),
-      this.k.color(10, 14, 24),
+      this.k.color(8, 12, 22),
       this.k.opacity(0),
-      this.k.z(20),
+      this.k.z(1200),
     ]);
 
     this.spotPrompt = this.k.add([
-      this.k.text('Spasi: Mulai Mancing', { size: 7 }),
+      this.k.text('Spasi: Mancing', { size: 14, font: 'sans-serif' }),
       this.k.pos(0, 0),
       this.k.anchor('center'),
+      this.k.scale(0.34),
       this.k.color(255, 255, 110),
       this.k.opacity(0),
-      this.k.z(21),
+      this.k.z(1201),
       'spot_prompt',
     ]);
   }

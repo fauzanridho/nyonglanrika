@@ -1,5 +1,5 @@
 // ============================================================
-// Data: NPCs
+// Data: NPCs (Koordinat disesuaikan dengan peta 48x28)
 // ============================================================
 
 export interface DialogLine {
@@ -26,8 +26,8 @@ export const NPCS: NpcDef[] = [
     id: 'npc_pak_camat',
     name: 'Pak Camat',
     zone: 'alun_alun',
-    x: 15 * 16,
-    y: 6 * 16,
+    x: 24 * 16,
+    y: 12 * 16,
     dialog: [
       { text: 'Selamat datang di Purwokerto, nak! Kota kecil tapi hangat.' },
       { text: 'Kalau mau cari uang, coba mancing di Sungai Serayu atau berkebun di rumahmu.' },
@@ -39,8 +39,8 @@ export const NPCS: NpcDef[] = [
     id: 'npc_pedagang',
     name: 'Bu Warni',
     zone: 'pasar_wage',
-    x: 10 * 16,
-    y: 4 * 16,
+    x: 24 * 16,
+    y: 8 * 16,
     dialog: [
       { text: 'Mau beli apa, nak? Bibit, umpan, atau perabotan rumah ada semua!' },
       { text: 'Kalau punya ikan atau sayuran, bawa ke sini. Saya beli.' },
@@ -51,10 +51,10 @@ export const NPCS: NpcDef[] = [
     id: 'npc_masinis',
     name: 'Pak Darto',
     zone: 'stasiun',
-    x: 10 * 16,
-    y: 4 * 16,
+    x: 20 * 16,
+    y: 5 * 16,
     dialog: [
-      { text: 'Stasiun Purwokerto! Mau ke mana? Dari sini bisa ke Baturraden.' },
+      { text: 'Stasiun Purwokerto! Mau ke mana? Dari Sungai Serayu bisa ke Baturraden.' },
       { text: 'Hati-hati di hutan pinus. Kabutnya tebal kalau pagi-pagi.' },
     ],
   },
@@ -62,11 +62,11 @@ export const NPCS: NpcDef[] = [
     id: 'npc_kakek_hutan',
     name: 'Mbah Gito',
     zone: 'baturraden',
-    x: 8 * 16,
-    y: 4 * 16,
+    x: 16 * 16,
+    y: 8 * 16,
     dialog: [
       { text: 'Ah, jarang ada anak muda datang ke sini...' },
-      { text: 'Telaga Sunyi di timur. Konon ikan langka ada di sana, tapi hanya muncul malam hari.' },
+      { text: 'Telaga Sunyi di selatan hutan. Konon ikan langka ada di sana, tapi hanya muncul malam hari.' },
       { text: 'Perhatikan benda-benda kecil di sekitar hutan. Siapa tahu ada yang menarik.' },
     ],
     questId: 'quest_telaga',

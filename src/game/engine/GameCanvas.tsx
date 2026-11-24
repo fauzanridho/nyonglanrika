@@ -15,6 +15,8 @@ import QuestModal, { QuestProgressItem } from '../ui/QuestModal';
 import MemoryPopup from '../ui/MemoryPopup';
 import MobileControls from '../ui/MobileControls';
 import WardrobeModal from '../ui/WardrobeModal';
+import Minimap from '../ui/Minimap';
+import { QUESTS } from '@/data/quests';
 import { sfx } from '../audio/sfx';
 import { getInventory, getMyHouse, getMyParty, getQuestsAndDiscoveries } from '@/lib/rpc';
 
@@ -174,16 +176,27 @@ export default function GameCanvas() {
 
       const k = kaplay({
         canvas: ref.current,
-        width: 480,
-        height: 270,
+        width: 640,
+        height: 360,
         letterbox: true,
         crisp: true,
         global: false,
-        background: [20, 24, 40],
+        background: [14, 17, 23],
       });
 
       kRef.current = k;
       isInitializingRef.current = false;
+
+      // Muat semua sprite statis SEKALI saat inisialisasi (mencegah lag saat pindah zona)
+      const { loadWorldSprites } = await import('../art/sprites/world');
+      const { loadNpcSprites } = await import('../art/sprites/npcs');
+      const { loadFishingSprites } = await import('../art/sprites/fishing');
+      const { loadMemorySprites } = await import('../art/sprites/memories');
+      loadWorldSprites(k);
+      loadNpcSprites(k);
+      loadFishingSprites(k);
+      loadMemorySprites(k);
+
       registerWorldScene(k);
 
       const currentPlayer = useGameStore.getState().player;
@@ -246,6 +259,12 @@ export default function GameCanvas() {
     }, 30);
   };
 
+  // Cari quest aktif pertama yang belum selesai
+  const doneQuestIds = new Set(questList.filter((q) => q.done).map((q) => q.quest_id));
+  const activeQuest = QUESTS.find(
+    (q) => !doneQuestIds.has(q.id) && (!q.prerequisite || doneQuestIds.has(q.prerequisite))
+  );
+
   return (
     <div className="fixed inset-0 w-screen h-screen bg-[#0e1117] overflow-hidden select-none font-mono flex items-center justify-center">
       {/* ═══ TOP HUD BAR ═══ */}
@@ -284,6 +303,23 @@ export default function GameCanvas() {
           )}
         </div>
       </div>
+
+      {/* ═══ ACTIVE QUEST TRACKER (Top Left) ═══ */}
+      {activeQuest && (
+        <button
+          onClick={() => { sfx.playClick(); setShowQuests(true); }}
+          className="absolute top-10 left-2 sm:top-12 sm:left-3 z-20 text-left bg-black/75 hover:bg-black/90 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-amber-500/30 shadow-xl max-w-[210px] sm:max-w-[260px] transition-colors cursor-pointer"
+          title="Klik untuk buka buku quest (Q)"
+        >
+          <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-amber-300 truncate">
+            <span>🧭</span>
+            <span className="truncate">{activeQuest.name}</span>
+          </div>
+          <div className="text-[9px] sm:text-[10px] text-gray-300 truncate mt-0.5">
+            • {activeQuest.steps[0]?.description}
+          </div>
+        </button>
+      )}
 
       {/* ═══ RIGHT SIDE ACTION BUTTONS ═══ */}
       <div className="absolute top-10 right-1.5 sm:top-12 sm:right-2 z-20 flex flex-col gap-1 sm:gap-1.5">
@@ -465,6 +501,9 @@ export default function GameCanvas() {
           }}
         />
       )}
+
+      {/* Minimap (Desktop) */}
+      <Minimap />
 
       {/* Kontrol Layar Sentuh Mobile / HP */}
       <MobileControls

@@ -34,7 +34,7 @@ export class DayNightWeatherSystem {
       this.k.color(0, 0, 0),
       this.k.opacity(0),
       this.k.fixed(),
-      this.k.z(50),
+      this.k.z(2000),
       'daynight_overlay',
     ]);
 
@@ -96,7 +96,7 @@ export class DayNightWeatherSystem {
 
     if (weather === 'rain' || weather === 'drizzle') {
       sfx.startRain(intensity);
-      const dropCount = weather === 'rain' ? 35 * intensity : 15;
+      const dropCount = Math.min(24, weather === 'rain' ? 14 * intensity : 10);
 
       for (let i = 0; i < dropCount; i++) {
         const drop = this.k.add([
@@ -105,7 +105,7 @@ export class DayNightWeatherSystem {
           this.k.color(180, 215, 255),
           this.k.opacity(this.k.rand(0.3, 0.7)),
           this.k.fixed(),
-          this.k.z(51),
+          this.k.z(2001),
           'rain_drop',
         ]);
 

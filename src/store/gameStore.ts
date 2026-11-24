@@ -63,6 +63,10 @@ export interface GameState {
   collection: Array<{ kind: string; entry_id: string; count: number }>;
   setCollection: (c: GameState['collection']) => void;
 
+  // ---- Live Position for Minimap ----
+  livePos: { zone: string; x: number; y: number };
+  setLivePos: (zone: string, x: number, y: number) => void;
+
   // ---- Loading ----
   isLoading: boolean;
   setIsLoading: (l: boolean) => void;
@@ -122,6 +126,10 @@ export const useGameStore = create<GameState>((set) => ({
   // Collection
   collection: [],
   setCollection: (c) => set({ collection: c }),
+
+  // Live Position for Minimap
+  livePos: { zone: 'alun_alun', x: 24 * 16, y: 13 * 16 },
+  setLivePos: (zone, x, y) => set({ livePos: { zone, x, y } }),
 
   // Loading
   isLoading: true,
