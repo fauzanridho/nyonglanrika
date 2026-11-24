@@ -33,10 +33,20 @@ export async function GET(request: Request) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      const forwardedHost = request.headers.get('x-forwarded-host');
+      const isLocalEnv = process.env.NODE_ENV === 'development';
+      if (!isLocalEnv && forwardedHost) {
+        return NextResponse.redirect(`https://${forwardedHost}${next}`);
+      }
       return NextResponse.redirect(`${origin}${next}`);
     }
     console.error('OAuth exchange error:', error);
   }
 
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const isLocalEnv = process.env.NODE_ENV === 'development';
+  if (!isLocalEnv && forwardedHost) {
+    return NextResponse.redirect(`https://${forwardedHost}/play`);
+  }
   return NextResponse.redirect(`${origin}/play`);
 }
