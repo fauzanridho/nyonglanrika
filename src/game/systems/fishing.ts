@@ -19,6 +19,7 @@ export class FishingSystem {
   private biteWindowTimeout: any = null;
   private isBiting: boolean = false;
   private isWaiting: boolean = false;
+  private spotPromptBg: any = null;
   private spotPrompt: any = null;
 
   constructor(k: KAPLAYCtx) {
@@ -40,14 +41,23 @@ export class FishingSystem {
       ]);
     });
 
-    // Prompt mengambang di atas spot saat pemain mendekat
-    this.spotPrompt = this.k.add([
-      this.k.text('Spasi: Mulai Mancing', { size: 6 }),
+    // Latar pill gelap + prompt mengambang di atas spot saat pemain mendekat
+    this.spotPromptBg = this.k.add([
+      this.k.rect(96, 11, { radius: 2 }),
       this.k.pos(0, 0),
       this.k.anchor('center'),
-      this.k.color(255, 255, 100),
+      this.k.color(10, 14, 24),
       this.k.opacity(0),
       this.k.z(20),
+    ]);
+
+    this.spotPrompt = this.k.add([
+      this.k.text('Spasi: Mulai Mancing', { size: 7 }),
+      this.k.pos(0, 0),
+      this.k.anchor('center'),
+      this.k.color(255, 255, 110),
+      this.k.opacity(0),
+      this.k.z(21),
       'spot_prompt',
     ]);
   }
@@ -59,7 +69,6 @@ export class FishingSystem {
     let minDist = 48; // Jangkauan luas (3 tile radius)
 
     spots.forEach((s) => {
-      // Perhitungan jarak dari pusat tile spot
       const spotCenterX = s.x * TILE_SIZE + TILE_SIZE / 2;
       const spotCenterY = s.y * TILE_SIZE + TILE_SIZE / 2;
       const dist = Math.hypot(playerPos.x - spotCenterX, playerPos.y - spotCenterY);
@@ -72,14 +81,17 @@ export class FishingSystem {
     if (nearSpot !== null && !this.isWaiting && !this.isBiting) {
       const activeSpot: { id: string; x: number; y: number } = nearSpot;
       this.currentSpot = activeSpot.id;
-      this.spotPrompt.pos = this.k.vec2(activeSpot.x * TILE_SIZE + 8, activeSpot.y * TILE_SIZE - 10);
+      const px = activeSpot.x * TILE_SIZE + 8;
+      const py = activeSpot.y * TILE_SIZE - 12;
+      this.spotPromptBg.pos = this.k.vec2(px, py);
+      this.spotPromptBg.opacity = 0.78;
+      this.spotPrompt.pos = this.k.vec2(px, py);
       this.spotPrompt.opacity = 1;
     } else {
       if (!this.isWaiting && !this.isBiting) {
         this.currentSpot = null;
-        if (this.spotPrompt) {
-          this.spotPrompt.opacity = 0;
-        }
+        if (this.spotPrompt) this.spotPrompt.opacity = 0;
+        if (this.spotPromptBg) this.spotPromptBg.opacity = 0;
       }
     }
   }

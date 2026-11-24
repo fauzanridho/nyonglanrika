@@ -2,7 +2,7 @@
 
 import { useGameStore } from '@/store/gameStore';
 import { QUESTS } from '@/data/quests';
-import { completeQuest, getPlayer } from '@/lib/rpc';
+import { completeQuest, getPlayer, getInventory } from '@/lib/rpc';
 import { sfx } from '@/game/audio/sfx';
 
 export interface QuestProgressItem {
@@ -35,7 +35,7 @@ export default function QuestModal({
     try {
       const res = await completeQuest(questId);
       sfx.playCoin();
-      const updatedPlayer = await getPlayer();
+      const [updatedPlayer, updatedInv] = await Promise.all([getPlayer(), getInventory()]);
       if (updatedPlayer) {
         setPlayer({
           id: updatedPlayer.id,
@@ -47,6 +47,7 @@ export default function QuestModal({
           posY: updatedPlayer.pos_y,
         });
       }
+      useGameStore.getState().setInventory(updatedInv);
       onRefresh();
     } catch (e: any) {
       alert(e.message || 'Gagal klaim hadiah');

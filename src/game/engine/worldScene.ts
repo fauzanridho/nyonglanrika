@@ -1,7 +1,6 @@
 // ============================================================
 // Scene World: Alun-alun, Gerak Pemain, Kamera, Tabrakan, Autosave,
 // Cuaca, Waktu WIB, SFX, NPC, Mancing, Kenangan & REALTIME MULTIPLAYER
-// — Menggunakan Supabase Realtime Presence untuk tracking online/offline
 // ============================================================
 
 import type { KAPLAYCtx } from 'kaplay';
@@ -33,6 +32,64 @@ export interface WorldSceneOptions {
   onDiscoverMemory?: (text: string) => void;
 }
 
+/**
+ * Helper untuk membuat label teks yang tajam dan selalu terbaca
+ * dengan latar belakang pill gelap semi-transparan.
+ */
+function createReadableLabel(
+  k: KAPLAYCtx,
+  text: string,
+  x: number,
+  y: number,
+  textColor: [number, number, number],
+  zIndex: number,
+  initialOpacity = 1
+) {
+  const padX = 5;
+  const approxWidth = Math.max(24, text.length * 4.4 + padX * 2);
+  const bg = k.add([
+    k.rect(approxWidth, 10, { radius: 2 }),
+    k.pos(x, y),
+    k.anchor('center'),
+    k.color(10, 14, 24),
+    k.opacity(initialOpacity * 0.78),
+    k.z(zIndex),
+  ]);
+
+  const label = k.add([
+    k.text(text, { size: 7 }),
+    k.pos(x, y),
+    k.anchor('center'),
+    k.color(...textColor),
+    k.opacity(initialOpacity),
+    k.z(zIndex + 1),
+  ]);
+
+  return {
+    bg,
+    label,
+    setPos(nx: number, ny: number) {
+      bg.pos = k.vec2(nx, ny);
+      label.pos = k.vec2(nx, ny);
+    },
+    setText(newText: string) {
+      if (label.text === newText) return;
+      label.text = newText;
+      bg.width = Math.max(24, newText.length * 4.4 + padX * 2);
+    },
+    setOpacity(op: number) {
+      label.opacity = op;
+      bg.opacity = op * 0.78;
+    },
+    destroy() {
+      try {
+        bg.destroy();
+        label.destroy();
+      } catch (e) {}
+    },
+  };
+}
+
 export function registerWorldScene(k: KAPLAYCtx) {
   k.scene('world', (opts: WorldSceneOptions = {}) => {
     const currentZoneId = opts.zoneId || 'alun_alun';
@@ -53,19 +110,37 @@ export function registerWorldScene(k: KAPLAYCtx) {
     const SPEED = 85;
     const TILE_SIZE = 16;
 
-    // Render Grid Peta menggunakan addLevel
+    // 1. RENDER BASE GROUND LAYER DI BAWAH SEMUA TILE (z=0)
+    // Ini memastikan tidak ada background hitam/biru gelap di sekitar pohon, bangku, lampu, kios, dll!
+    const isUrbanPaving = currentZoneId === 'pasar_wage' || currentZoneId === 'stasiun';
+    const baseSprite = isUrbanPaving ? 'paving' : 'grass';
+    const rows = zoneDef.grid.length;
+    const cols = zoneDef.grid[0]?.length || 30;
+
+    for (let gy = 0; gy < rows; gy++) {
+      for (let gx = 0; gx < cols; gx++) {
+        // Variasi bunga kecil deterministik di area rumput
+        const isFlower = !isUrbanPaving && ((gx * 7 + gy * 13) % 19 === 0);
+        k.add([
+          k.sprite(isFlower ? 'grass_flower' : baseSprite),
+          k.pos(gx * TILE_SIZE, gy * TILE_SIZE),
+          k.z(0),
+        ]);
+      }
+    }
+
+    // 2. RENDER OBJEK & RINTANGAN DI ATAS GROUND (z=2)
     const tileConfig: Record<string, () => any[]> = {
-      'T': () => [k.sprite('tree'), k.area(), k.body({ isStatic: true }), 'obstacle'],
-      'b': () => [k.sprite('bench'), k.area(), k.body({ isStatic: true }), 'obstacle', 'bench'],
-      'L': () => [k.sprite('lamp'), k.area(), k.body({ isStatic: true }), 'obstacle', 'lamp'],
-      'W': () => [k.sprite('water'), k.area(), k.body({ isStatic: true }), 'obstacle', 'water'],
-      'R': () => [k.sprite('water'), k.area(), k.body({ isStatic: true }), 'obstacle', 'water'],
-      'P': () => [k.sprite('pine'), k.area(), k.body({ isStatic: true }), 'obstacle'],
-      'B': () => [k.sprite('paving')],
-      'S': () => [k.sprite('stall'), k.area(), k.body({ isStatic: true }), 'obstacle'],
-      'r': () => [k.sprite('rail')],
-      '.': () => [k.sprite('grass')],
-      ' ': () => [k.sprite('grass')],
+      'T': () => [k.sprite('tree'), k.area(), k.body({ isStatic: true }), k.z(2), 'obstacle'],
+      'b': () => [k.sprite('bench'), k.area(), k.body({ isStatic: true }), k.z(2), 'obstacle', 'bench'],
+      'L': () => [k.sprite('lamp'), k.area(), k.body({ isStatic: true }), k.z(2), 'obstacle', 'lamp'],
+      'W': () => [k.sprite('water'), k.area(), k.body({ isStatic: true }), k.z(1), 'obstacle', 'water'],
+      'R': () => [k.sprite('water'), k.area(), k.body({ isStatic: true }), k.z(1), 'obstacle', 'water'],
+      'P': () => [k.sprite('pine'), k.area(), k.body({ isStatic: true }), k.z(2), 'obstacle'],
+      'B': () => [k.sprite('paving'), k.z(1)],
+      'S': () => [k.sprite('stall'), k.area(), k.body({ isStatic: true }), k.z(2), 'obstacle'],
+      'r': () => [k.sprite('rail'), k.z(1)],
+      // '.' dan ' ' tidak perlu spawn lagi karena base ground sudah dirender di z=0
     };
 
     k.addLevel(zoneDef.grid, {
@@ -77,7 +152,11 @@ export function registerWorldScene(k: KAPLAYCtx) {
 
     // Inisialisasi Siklus Waktu & Cuaca Server
     const weatherSys = new DayNightWeatherSystem(k);
-    weatherSys.init().then((wData) => {
+    weatherSys.init((wData) => {
+      if (opts.onWeatherChange) {
+        opts.onWeatherChange(wData);
+      }
+    }).then((wData) => {
       if (wData && opts.onWeatherChange) {
         opts.onWeatherChange(wData);
       }
@@ -93,6 +172,9 @@ export function registerWorldScene(k: KAPLAYCtx) {
     const startX = opts.spawnX ?? zoneDef.spawnX ?? 15 * 16;
     const startY = opts.spawnY ?? zoneDef.spawnY ?? 7 * 16;
 
+    // Catat zona saat ini di DB agar quest kunjungan tercatat
+    saveState(currentZoneId, Math.round(startX), Math.round(startY)).catch(() => {});
+
     const player = k.add([
       k.sprite(localSpriteKey, { anim: 'idle-down' }),
       k.pos(startX, startY),
@@ -103,30 +185,30 @@ export function registerWorldScene(k: KAPLAYCtx) {
       'player',
     ]);
 
-    // Name Tag Pemain Lokal (Dinamis sinkron dengan useGameStore)
+    // Name Tag Pemain Lokal (Tajam + Pill Gelap)
     const getLocalPlayerName = () => useGameStore.getState().player?.name || opts.playerName || 'Player';
-    const tag = k.add([
-      k.text(getLocalPlayerName(), { size: 6 }),
-      k.pos(player.pos.x, player.pos.y - 12),
-      k.anchor('center'),
-      k.color(255, 255, 180),
-      k.z(12),
-    ]);
-    tag.onUpdate(() => {
+    const localTag = createReadableLabel(
+      k,
+      getLocalPlayerName(),
+      player.pos.x,
+      player.pos.y - 14,
+      [255, 255, 180],
+      20,
+      1
+    );
+    localTag.label.onUpdate(() => {
       if (!player?.pos) return;
-      tag.pos = k.vec2(player.pos.x, player.pos.y - 12);
-      const currentName = getLocalPlayerName();
-      if (tag.text !== currentName) {
-        tag.text = currentName;
-      }
+      localTag.setPos(player.pos.x, player.pos.y - 14);
+      localTag.setText(getLocalPlayerName());
     });
 
     // ============================================================
     // SISTEM REALTIME MULTIPLAYER — PRESENCE-BASED
-    // Menggunakan Supabase Realtime Presence agar pemain offline
-    // otomatis hilang dari dunia (tidak ada "ghost player").
     // ============================================================
-    const otherPlayersMap = new Map<string, { body: any; tag: any; look?: any }>();
+    const otherPlayersMap = new Map<
+      string,
+      { body: any; tag: ReturnType<typeof createReadableLabel>; look?: any }
+    >();
     const supabase = createClient();
 
     function spawnOrUpdateOtherPlayer(pData: {
@@ -138,7 +220,6 @@ export function registerWorldScene(k: KAPLAYCtx) {
       zone?: string;
     }) {
       if (!pData.id || pData.id === opts.myPlayerId) return;
-      // Jika pemain berada di zona lain, hapus dari tampilan
       if (pData.zone && pData.zone !== currentZoneId) {
         removeOtherPlayer(pData.id);
         return;
@@ -151,13 +232,11 @@ export function registerWorldScene(k: KAPLAYCtx) {
         const dx = pData.pos_x - op.body.pos.x;
         const dy = pData.pos_y - op.body.pos.y;
 
-        // Cek jika style penampilan pemain lain berubah
         if (pData.look && JSON.stringify(pData.look) !== JSON.stringify(op.look)) {
           loadPlayerSprite(k, pData.look, spriteKey);
           op.look = pData.look;
         }
 
-        // Animasi gerak pemain lain
         if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
           if (Math.abs(dx) > Math.abs(dy)) {
             if (op.body.curAnim() !== 'walk-side') op.body.play('walk-side');
@@ -174,12 +253,11 @@ export function registerWorldScene(k: KAPLAYCtx) {
         }
 
         op.body.pos = k.vec2(pData.pos_x, pData.pos_y);
-        op.tag.pos = k.vec2(pData.pos_x, pData.pos_y - 12);
-        op.tag.text = pData.name;
+        op.tag.setPos(pData.pos_x, pData.pos_y - 14);
+        op.tag.setText(pData.name);
         return;
       }
 
-      // Load sprite dengan identitas penampilan unik
       loadPlayerSprite(k, pData.look, spriteKey);
 
       const otherBody = k.add([
@@ -191,13 +269,15 @@ export function registerWorldScene(k: KAPLAYCtx) {
         'other_player',
       ]);
 
-      const otherTag = k.add([
-        k.text(pData.name, { size: 6 }),
-        k.pos(pData.pos_x, pData.pos_y - 12),
-        k.anchor('center'),
-        k.color(140, 240, 255),
-        k.z(11),
-      ]);
+      const otherTag = createReadableLabel(
+        k,
+        pData.name,
+        pData.pos_x,
+        pData.pos_y - 14,
+        [140, 240, 255],
+        18,
+        1
+      );
 
       otherPlayersMap.set(pData.id, { body: otherBody, tag: otherTag, look: pData.look });
     }
@@ -213,15 +293,10 @@ export function registerWorldScene(k: KAPLAYCtx) {
       }
     }
 
-    // --- Supabase Realtime Presence Channel ---
-    // Setiap klien men-track presence-nya sendiri.
-    // Ketika klien disconnect / tutup browser, Supabase otomatis menghapus
-    // presence record-nya => client lain langsung tahu dan menghapus avatar.
     const presenceChannel = supabase.channel(`presence_zone_${currentZoneId}`, {
       config: { presence: { key: opts.myPlayerId || 'unknown' } },
     });
 
-    // Track siapa yang online & posisinya
     presenceChannel
       .on('presence', { event: 'sync' }, () => {
         const presenceState = presenceChannel.presenceState<{
@@ -233,7 +308,6 @@ export function registerWorldScene(k: KAPLAYCtx) {
           zone?: string;
         }>();
 
-        // ID pemain yang sekarang ONLINE di zona ini
         const onlineIds = new Set<string>();
 
         for (const [key, entries] of Object.entries(presenceState)) {
@@ -245,7 +319,6 @@ export function registerWorldScene(k: KAPLAYCtx) {
           }
         }
 
-        // Hapus pemain yang sudah OFFLINE (tidak ada di presenceState lagi)
         for (const [existingId] of otherPlayersMap) {
           if (!onlineIds.has(existingId)) {
             removeOtherPlayer(existingId);
@@ -253,14 +326,12 @@ export function registerWorldScene(k: KAPLAYCtx) {
         }
       })
       .on('presence', { event: 'leave' }, ({ key }) => {
-        // Pemain langsung hilang saat disconnect
         if (key && key !== opts.myPlayerId) {
           removeOtherPlayer(key);
         }
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          // Broadcast presence saya sendiri
           const freshPlayer = useGameStore.getState().player;
           await presenceChannel.track({
             id: opts.myPlayerId,
@@ -273,8 +344,6 @@ export function registerWorldScene(k: KAPLAYCtx) {
         }
       });
 
-    // Juga tetap dengarkan postgres_changes untuk UPDATE posisi realtime
-    // (lebih granular daripada presence sync yang lebih lambat)
     const worldChannel = supabase
       .channel(`world_zone_${currentZoneId}`)
       .on(
@@ -306,19 +375,20 @@ export function registerWorldScene(k: KAPLAYCtx) {
           { hintId: mo.hint_id, targetX: mo.x * TILE_SIZE, targetY: mo.y * TILE_SIZE },
         ]);
 
-        const promptTag = k.add([
-          k.text('E: Periksa', { size: 5 }),
-          k.pos(mo.x * TILE_SIZE + 8, mo.y * TILE_SIZE - 8),
-          k.anchor('center'),
-          k.color(180, 220, 255),
-          k.opacity(0),
-          k.z(15),
-        ]);
+        const promptLabel = createReadableLabel(
+          k,
+          'E: Periksa',
+          mo.x * TILE_SIZE + 8,
+          mo.y * TILE_SIZE - 8,
+          [160, 225, 255],
+          25,
+          0
+        );
 
-        promptTag.onUpdate(() => {
+        promptLabel.label.onUpdate(() => {
           if (!player?.pos) return;
           const dist = Math.hypot(player.pos.x - (mo.x * TILE_SIZE + 8), player.pos.y - (mo.y * TILE_SIZE + 8));
-          promptTag.opacity = dist < 32 ? 1 : 0;
+          promptLabel.setOpacity(dist < 32 ? 1 : 0);
         });
 
         memoryObjList.push({ hintId: mo.hint_id, x: mo.x * TILE_SIZE, y: mo.y * TILE_SIZE });
@@ -350,27 +420,30 @@ export function registerWorldScene(k: KAPLAYCtx) {
         { def: npcDef },
       ]);
 
-      k.add([
-        k.text(npcDef.name, { size: 6 }),
-        k.pos(npcDef.x, npcDef.y - 12),
-        k.anchor('center'),
-        k.color(255, 240, 140),
-        k.z(11),
-      ]);
+      createReadableLabel(
+        k,
+        npcDef.name,
+        npcDef.x,
+        npcDef.y - 14,
+        [255, 240, 140],
+        18,
+        1
+      );
 
-      const interactIndicator = k.add([
-        k.text('E: Bicara', { size: 5 }),
-        k.pos(npcDef.x, npcDef.y - 19),
-        k.anchor('center'),
-        k.color(255, 230, 80),
-        k.opacity(0),
-        k.z(12),
-      ]);
+      const interactLabel = createReadableLabel(
+        k,
+        'E: Bicara',
+        npcDef.x,
+        npcDef.y - 25,
+        [255, 230, 80],
+        24,
+        0
+      );
 
-      interactIndicator.onUpdate(() => {
+      interactLabel.label.onUpdate(() => {
         if (!player?.pos) return;
         const dist = Math.hypot(player.pos.x - npcDef.x, player.pos.y - npcDef.y);
-        interactIndicator.opacity = dist < 28 ? 1 : 0;
+        interactLabel.setOpacity(dist < 28 ? 1 : 0);
       });
     });
 
@@ -513,23 +586,23 @@ export function registerWorldScene(k: KAPLAYCtx) {
     // Papan / Sign Portal Antar-Zona
     if (zoneDef.portals && zoneDef.portals.length > 0) {
       zoneDef.portals.forEach((p) => {
-        // Strip indikator portal (subtle)
         k.add([
           k.rect(TILE_SIZE * 2, 4),
           k.pos((p.x - 0.5) * TILE_SIZE, p.y * TILE_SIZE + 6),
           k.color(255, 230, 100),
-          k.opacity(0.3),
+          k.opacity(0.35),
           k.z(2),
         ]);
 
-        const labelTag = k.add([
-          k.text(p.label, { size: 6 }),
-          k.pos(p.x * TILE_SIZE, p.y * TILE_SIZE - (p.y === 0 ? -12 : 8)),
-          k.anchor('center'),
-          k.color(255, 240, 160),
-          k.opacity(0),
-          k.z(15),
-        ]);
+        const portalLabel = createReadableLabel(
+          k,
+          p.label,
+          p.x * TILE_SIZE,
+          p.y * TILE_SIZE - (p.y === 0 ? -14 : 10),
+          [255, 240, 160],
+          26,
+          0
+        );
 
         const portalObj = k.add([
           k.rect(TILE_SIZE * 1.5, TILE_SIZE * 1.5),
@@ -543,7 +616,7 @@ export function registerWorldScene(k: KAPLAYCtx) {
         portalObj.onUpdate(() => {
           if (!player?.pos) return;
           const dist = Math.hypot(player.pos.x - p.x * TILE_SIZE, player.pos.y - p.y * TILE_SIZE);
-          labelTag.opacity = dist < 32 ? 1 : 0;
+          portalLabel.setOpacity(dist < 32 ? 1 : 0);
         });
 
         let isTeleporting = false;
@@ -575,7 +648,6 @@ export function registerWorldScene(k: KAPLAYCtx) {
     }
 
     // Sync broadcast posisi berkala (tiap 1.5 detik jika bergerak)
-    // Sekarang JUGA update Presence agar klien lain bisa lihat posisi terbaru
     let lastSavedX = player?.pos?.x ?? 0;
     let lastSavedY = player?.pos?.y ?? 0;
     const saveInterval = setInterval(() => {
@@ -584,9 +656,7 @@ export function registerWorldScene(k: KAPLAYCtx) {
       if (dist > 8) {
         lastSavedX = player.pos.x;
         lastSavedY = player.pos.y;
-        // Simpan ke DB
         saveState(currentZoneId, Math.round(player.pos.x), Math.round(player.pos.y)).catch(console.error);
-        // Update presence agar pemain lain lihat posisi terbaru
         const freshPlayer = useGameStore.getState().player;
         presenceChannel.track({
           id: opts.myPlayerId,
@@ -602,7 +672,6 @@ export function registerWorldScene(k: KAPLAYCtx) {
     const handleBeforeUnload = () => {
       if (!player?.pos) return;
       saveState(currentZoneId, Math.round(player.pos.x), Math.round(player.pos.y)).catch(console.error);
-      // Untrack presence agar avatar langsung hilang
       presenceChannel.untrack().catch(() => {});
     };
     if (typeof window !== 'undefined') {

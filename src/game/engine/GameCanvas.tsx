@@ -50,6 +50,22 @@ export default function GameCanvas() {
   const [discoveriesCount, setDiscoveriesCount] = useState(0);
   const [discoveredMemoryText, setDiscoveredMemoryText] = useState<string | null>(null);
   const [fishingBanner, setFishingBanner] = useState<{ status: string; msg?: string } | null>(null);
+  const [wibClock, setWibClock] = useState<string>('--:--');
+
+  useEffect(() => {
+    const updateClock = () => {
+      const nowStr = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Jakarta',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(new Date());
+      setWibClock(nowStr);
+    };
+    updateClock();
+    const timer = setInterval(updateClock, 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   const refreshHouse = () => {
     getMyHouse()
@@ -259,7 +275,7 @@ export default function GameCanvas() {
             <span className="text-sky-200">{getWeatherIcon(weather?.weather)}</span>
           </div>
           <div className="bg-black/50 px-2 py-0.5 rounded-full border border-orange-500/30">
-            <span className="text-orange-200">🕒 {weather?.hour !== undefined ? `${String(weather.hour).padStart(2, '0')}:00` : '--:--'}</span>
+            <span className="text-orange-200">🕒 {wibClock} WIB</span>
           </div>
           {activeBuff && activeBuff.expiresAt > Date.now() && (
             <div className="bg-emerald-900/60 px-2 py-0.5 rounded-full border border-emerald-400/40 animate-pulse">
@@ -272,18 +288,18 @@ export default function GameCanvas() {
       {/* ═══ RIGHT SIDE ACTION BUTTONS ═══ */}
       <div className="absolute top-10 right-1.5 sm:top-12 sm:right-2 z-20 flex flex-col gap-1 sm:gap-1.5">
         {[
-          { icon: '👗', label: 'Lemari', color: 'pink', onClick: () => setShowWardrobe(true) },
-          { icon: '📜', label: 'Quest', color: 'amber', onClick: () => setShowQuests(true) },
-          { icon: '👥', label: 'Party', color: 'indigo', onClick: () => setShowParty(true) },
-          { icon: '🌱', label: 'Kebun', color: 'emerald', onClick: () => setShowFarming(true) },
-          { icon: '🍳', label: 'Masak', color: 'orange', onClick: () => setShowCooking(true) },
-          { icon: '🎒', label: 'Tas', color: 'yellow', onClick: () => toggleInventory() },
-          { icon: '📖', label: 'Album', color: 'sky', onClick: () => setShowAlbum(true) },
+          { icon: '👗', label: 'Lemari', cls: 'text-pink-300', onClick: () => setShowWardrobe(true) },
+          { icon: '📜', label: 'Quest', cls: 'text-amber-300', onClick: () => setShowQuests(true) },
+          { icon: '👥', label: 'Party', cls: 'text-indigo-300', onClick: () => setShowParty(true) },
+          { icon: '🌱', label: 'Kebun', cls: 'text-emerald-300', onClick: () => setShowFarming(true) },
+          { icon: '🍳', label: 'Masak', cls: 'text-orange-300', onClick: () => setShowCooking(true) },
+          { icon: '🎒', label: 'Tas', cls: 'text-yellow-300', onClick: () => toggleInventory() },
+          { icon: '📖', label: 'Album', cls: 'text-sky-300', onClick: () => setShowAlbum(true) },
         ].map((btn) => (
           <button
             key={btn.label}
             onClick={() => { sfx.playClick(); btn.onClick(); }}
-            className={`bg-black/70 hover:bg-black/90 text-${btn.color}-300 text-[10px] sm:text-[11px] pl-1.5 pr-2 py-1 sm:py-1.5 rounded-l-lg border border-r-0 border-white/10 transition-all hover:translate-x-[-2px] shadow-lg cursor-pointer flex items-center gap-1 whitespace-nowrap`}
+            className={`bg-black/75 hover:bg-black/95 ${btn.cls} text-[10px] sm:text-[11px] pl-1.5 pr-2 py-1 sm:py-1.5 rounded-l-lg border border-r-0 border-white/15 transition-all hover:translate-x-[-2px] shadow-lg cursor-pointer flex items-center gap-1 whitespace-nowrap`}
             title={btn.label}
           >
             <span>{btn.icon}</span>
